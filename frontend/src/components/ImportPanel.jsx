@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { importCSV, exportCSV } from "../api.js";
 
-export default function ImportPanel({ onImportDone }) {
+export default function ImportPanel({ onImportDone, filters }) {
   const fileRef = useRef(null);
   const [replaceAll, setReplaceAll] = useState(false);
   const [result, setResult] = useState(null);
@@ -24,6 +24,10 @@ export default function ImportPanel({ onImportDone }) {
       setLoading(false);
       e.target.value = "";
     }
+  }
+
+  function handleExport() {
+    exportCSV(filters || {});
   }
 
   return (
@@ -53,7 +57,7 @@ export default function ImportPanel({ onImportDone }) {
         {loading ? "Importing…" : "Import CSV"}
       </button>
 
-      <button className="btn btn-ghost" onClick={exportCSV}>
+      <button className="btn btn-ghost" onClick={handleExport}>
         Export CSV
       </button>
 

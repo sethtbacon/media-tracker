@@ -5,6 +5,7 @@ from typing import Optional
 import pandas as pd
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import StreamingResponse
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -182,8 +183,55 @@ def generate_csv(items):
 
 
 @router.get("/import/export/csv")
-def export_csv(db: Session = Depends(get_db)):
-    items = db.query(MediaItem).order_by(MediaItem.title).all()
+def export_csv(
+    search: Optional[str] = None,
+    media_type: Optional[str] = None,
+    physical_bluray: Optional[bool] = None,
+    physical_dvd: Optional[bool] = None,
+    physical_4k: Optional[bool] = None,
+    digital_apple_tv: Optional[bool] = None,
+    digital_plex: Optional[bool] = None,
+    digital_movies_anywhere: Optional[bool] = None,
+    location: Optional[str] = None,
+    loaned: Optional[bool] = None,
+    watched: Optional[bool] = None,
+    genre: Optional[str] = None,
+    mpaa_rating: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    query = db.query(MediaItem)
+
+    if search:
+        pattern = f"%{search}%"
+        query = query.filter(
+            or_(MediaItem.title.ilike(pattern), MediaItem.director.ilike(pattern))
+        )
+    if media_type:
+        query = query.filter(MediaItem.media_type == media_type)
+    if physical_bluray is not None:
+        query = query.filter(MediaItem.physical_bluray == physical_bluray)
+    if physical_dvd is not None:
+        query = query.filter(MediaItem.physical_dvd == physical_dvd)
+    if physical_4k is not None:
+        query = query.filter(MediaItem.physical_4k == physical_4k)
+    if digital_apple_tv is not None:
+        query = query.filter(MediaItem.digital_apple_tv == digital_apple_tv)
+    if digital_plex is not None:
+        query = query.filter(MediaItem.digital_plex == digital_plex)
+    if digital_movies_anywhere is not None:
+        query = query.filter(MediaItem.digital_movies_anywhere == digital_movies_anywhere)
+    if location:
+        query = query.filter(MediaItem.location.ilike(f"%{location}%"))
+    if loaned is True:
+        query = query.filter(MediaItem.loaned_to != None, MediaItem.loaned_to != "")
+    if watched is not None:
+        query = query.filter(MediaItem.watched == watched)
+    if genre:
+        query = query.filter(MediaItem.genre.ilike(f"%{genre}%"))
+    if mpaa_rating:
+        query = query.filter(MediaItem.mpaa_rating == mpaa_rating)
+
+    items = query.order_by(MediaItem.title).all()
     return StreamingResponse(
         generate_csv(items),
         media_type="text/csv",

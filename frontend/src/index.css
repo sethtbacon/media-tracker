@@ -520,6 +520,90 @@ input:focus, select:focus, textarea:focus {
   color: var(--text-muted);
 }
 
+/* ── Poster thumbnail ──────────────────────────────────── */
+.poster-thumb {
+  width: 28px;
+  height: 42px;
+  object-fit: cover;
+  border-radius: 3px;
+  vertical-align: middle;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.title-cell {
+  display: flex;
+  align-items: center;
+}
+
+/* ── Watched toggle ────────────────────────────────────── */
+.watched-toggle {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-muted);
+  width: 24px;
+  height: 24px;
+  font-size: 13px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.watched-toggle:hover { border-color: var(--success); color: var(--success); }
+.watched-toggle.on {
+  background: color-mix(in srgb, var(--success) 15%, transparent);
+  border-color: var(--success);
+  color: var(--success);
+  font-weight: 700;
+}
+
+/* ── Inline rating input ───────────────────────────────── */
+.rating-cell { cursor: pointer; }
+.inline-rating-input {
+  width: 52px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  text-align: right;
+}
+.muted { color: var(--border); }
+
+/* ── Fetch metadata button ─────────────────────────────── */
+.fetch-meta-btn {
+  height: 36px;
+  white-space: nowrap;
+  font-size: 12px;
+  margin-bottom: 0;
+  align-self: flex-end;
+}
+
+/* ── Duplicate warning ─────────────────────────────────── */
+.duplicate-warning {
+  background: color-mix(in srgb, var(--warning) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--warning) 40%, transparent);
+  color: var(--warning);
+  border-radius: 6px;
+  padding: 7px 12px;
+  font-size: 12px;
+}
+
+/* ── Fetch error ───────────────────────────────────────── */
+.fetch-error {
+  color: var(--danger);
+  font-size: 12px;
+}
+
+/* ── Cover preview ─────────────────────────────────────── */
+.cover-preview {
+  display: flex;
+}
+.cover-preview img {
+  height: 90px;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
 /* ── Scrollbar ─────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 7px; height: 7px; }
 ::-webkit-scrollbar-track { background: transparent; }

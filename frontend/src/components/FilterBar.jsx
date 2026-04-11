@@ -5,6 +5,7 @@ const DEFAULTS = {
   media_type: "",
   location: "",
   mpaa_rating: "",
+  genre: "",
   physical_4k: false,
   physical_bluray: false,
   physical_dvd: false,
@@ -12,28 +13,40 @@ const DEFAULTS = {
   digital_plex: false,
   digital_movies_anywhere: false,
   loaned: false,
+  watched: false,
 };
 
 export { DEFAULTS as FILTER_DEFAULTS };
 
 export default function FilterBar({ filters, onChange }) {
-  const debounceRef = useRef(null);
+  const searchDebounce = useRef(null);
+  const genreDebounce = useRef(null);
+  const searchRef = useRef(null);
+  const genreRef = useRef(null);
 
   function handleSearch(e) {
     const value = e.target.value;
-    clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
+    clearTimeout(searchDebounce.current);
+    searchDebounce.current = setTimeout(() => {
       onChange({ ...filters, search: value });
     }, 400);
   }
 
-  // Keep input value in sync if filters are cleared externally
-  const searchRef = useRef(null);
+  function handleGenre(e) {
+    const value = e.target.value;
+    clearTimeout(genreDebounce.current);
+    genreDebounce.current = setTimeout(() => {
+      onChange({ ...filters, genre: value });
+    }, 400);
+  }
+
   useEffect(() => {
-    if (searchRef.current && filters.search === "") {
-      searchRef.current.value = "";
-    }
+    if (searchRef.current && filters.search === "") searchRef.current.value = "";
   }, [filters.search]);
+
+  useEffect(() => {
+    if (genreRef.current && filters.genre === "") genreRef.current.value = "";
+  }, [filters.genre]);
 
   function handleSelect(key, value) {
     onChange({ ...filters, [key]: value });
@@ -45,17 +58,19 @@ export default function FilterBar({ filters, onChange }) {
 
   function clear() {
     if (searchRef.current) searchRef.current.value = "";
+    if (genreRef.current) genreRef.current.value = "";
     onChange({ ...DEFAULTS });
   }
 
   const toggles = [
-    { key: "physical_4k",           label: "4K" },
-    { key: "physical_bluray",        label: "Blu-ray" },
-    { key: "physical_dvd",           label: "DVD" },
-    { key: "digital_apple_tv",       label: "Apple TV" },
-    { key: "digital_plex",           label: "Plex" },
-    { key: "digital_movies_anywhere",label: "MA" },
-    { key: "loaned",                 label: "Loaned" },
+    { key: "physical_4k",            label: "4K" },
+    { key: "physical_bluray",         label: "Blu-ray" },
+    { key: "physical_dvd",            label: "DVD" },
+    { key: "digital_apple_tv",        label: "Apple TV" },
+    { key: "digital_plex",            label: "Plex" },
+    { key: "digital_movies_anywhere", label: "MA" },
+    { key: "loaned",                  label: "Loaned" },
+    { key: "watched",                 label: "Watched" },
   ];
 
   return (
@@ -67,6 +82,16 @@ export default function FilterBar({ filters, onChange }) {
         placeholder="Search title or director…"
         defaultValue={filters.search}
         onChange={handleSearch}
+      />
+
+      <input
+        ref={genreRef}
+        className="filter-search"
+        type="text"
+        placeholder="Genre…"
+        style={{ width: 120 }}
+        defaultValue={filters.genre}
+        onChange={handleGenre}
       />
 
       <select

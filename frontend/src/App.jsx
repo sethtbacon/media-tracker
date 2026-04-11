@@ -16,40 +16,22 @@ export default function App() {
   const [skip, setSkip] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  // Modal state: null = closed, undefined = new item, object = edit item
+  // Modal state: null = new item, object = edit item, modalOpen controls visibility
   const [modalItem, setModalItem] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
 
   const fetchStats = useCallback(async () => {
-    try {
-      const s = await getStats();
-      setStats(s);
-    } catch (e) {
-      console.error("Failed to fetch stats", e);
-    }
+    try { setStats(await getStats()); } catch (e) { console.error(e); }
   }, []);
 
   const fetchMedia = useCallback(async (currentFilters, currentSkip, append = false) => {
     setLoading(true);
     try {
-      const params = {
-        ...currentFilters,
-        skip: currentSkip,
-        limit: PAGE_SIZE,
-      };
-      // Convert boolean toggle filters: only send if true
-      const boolKeys = [
-        "physical_4k", "physical_bluray", "physical_dvd",
-        "digital_apple_tv", "digital_plex", "digital_movies_anywhere", "loaned",
-      ];
-      for (const k of boolKeys) {
-        if (!params[k]) delete params[k];
-      }
-      // Remove empty strings
+      const params = { ...currentFilters, skip: currentSkip, limit: PAGE_SIZE };
+      // Only send truthy boolean filters
       for (const k of Object.keys(params)) {
-        if (params[k] === "" || params[k] === false) delete params[k];
+        if (params[k] === false || params[k] === "") delete params[k];
       }
-
       const data = await getMedia(params);
       setTotal(data.total);
       setItems((prev) => append ? [...prev, ...data.items] : data.items);
@@ -60,13 +42,11 @@ export default function App() {
     }
   }, []);
 
-  // Initial load
   useEffect(() => {
     fetchStats();
     fetchMedia(filters, 0);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Re-fetch when filters change
   useEffect(() => {
     setSkip(0);
     fetchMedia(filters, 0);
@@ -78,20 +58,9 @@ export default function App() {
     fetchMedia(filters, newSkip, true);
   }
 
-  function openNew() {
-    setModalItem(null);
-    setModalOpen(true);
-  }
-
-  function openEdit(item) {
-    setModalItem(item);
-    setModalOpen(true);
-  }
-
-  function closeModal() {
-    setModalOpen(false);
-    setModalItem(null);
-  }
+  function openNew()        { setModalItem(null); setModalOpen(true); }
+  function openEdit(item)   { setModalItem(item); setModalOpen(true); }
+  function closeModal()     { setModalOpen(false); setModalItem(null); }
 
   async function handleSave(formData) {
     try {
@@ -120,6 +89,28 @@ export default function App() {
     }
   }
 
+  async function handleToggleWatched(id, watched) {
+    // Optimistic update
+    setItems((prev) => prev.map((i) => i.id === id ? { ...i, watched } : i));
+    try {
+      await updateMedia(id, { watched });
+    } catch (e) {
+      // Revert on error
+      setItems((prev) => prev.map((i) => i.id === id ? { ...i, watched: !watched } : i));
+      console.error("Failed to toggle watched", e);
+    }
+  }
+
+  async function handleInlineRate(id, my_rating) {
+    // Optimistic update
+    setItems((prev) => prev.map((i) => i.id === id ? { ...i, my_rating } : i));
+    try {
+      await updateMedia(id, { my_rating });
+    } catch (e) {
+      console.error("Failed to update rating", e);
+    }
+  }
+
   function handleImportDone() {
     setSkip(0);
     fetchMedia(filters, 0);
@@ -133,7 +124,7 @@ export default function App() {
       <header className="header">
         <span className="header-title">🎬 Media Tracker</span>
         <div className="header-actions">
-          <ImportPanel onImportDone={handleImportDone} />
+          <ImportPanel onImportDone={handleImportDone} filters={filters} />
           <button className="btn btn-primary" onClick={openNew}>
             + Add Item
           </button>
@@ -150,6 +141,8 @@ export default function App() {
         onDelete={handleDelete}
         onLoadMore={handleLoadMore}
         hasMore={hasMore}
+        onToggleWatched={handleToggleWatched}
+        onInlineRate={handleInlineRate}
       />
 
       {modalOpen && (

@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { lookupMetadata, getMedia } from "../api.js";
 
 const EMPTY = {
   title: "",
@@ -9,7 +10,9 @@ const EMPTY = {
   runtime: "",
   mpaa_rating: "",
   imdb_id: "",
+  tmdb_id: "",
   plot: "",
+  cover_url: "",
   physical_bluray: false,
   physical_dvd: false,
   physical_4k: false,
@@ -22,8 +25,6 @@ const EMPTY = {
   watched: false,
   my_rating: "",
   notes: "",
-  cover_url: "",
-  tmdb_id: "",
 };
 
 function toFormState(item) {
@@ -50,13 +51,18 @@ function toFormState(item) {
 export default function EditModal({ item, onSave, onClose }) {
   const [form, setForm] = useState(() => toFormState(item));
   const [titleError, setTitleError] = useState(false);
+  const [duplicates, setDuplicates] = useState([]);
+  const [fetching, setFetching] = useState(false);
+  const [fetchError, setFetchError] = useState(null);
+  const dupDebounce = useRef(null);
 
   useEffect(() => {
     setForm(toFormState(item));
     setTitleError(false);
+    setDuplicates([]);
+    setFetchError(null);
   }, [item]);
 
-  // Close on Escape
   useEffect(() => {
     function onKey(e) { if (e.key === "Escape") onClose(); }
     window.addEventListener("keydown", onKey);
@@ -68,30 +74,66 @@ export default function EditModal({ item, onSave, onClose }) {
     if (key === "title") setTitleError(false);
   }
 
-  function handleSubmit() {
-    if (!form.title.trim()) {
-      setTitleError(true);
-      return;
-    }
+  // Duplicate check on title blur (only for new items)
+  function handleTitleBlur(e) {
+    const title = e.target.value.trim();
+    if (!title || item) { setDuplicates([]); return; }
+    clearTimeout(dupDebounce.current);
+    dupDebounce.current = setTimeout(async () => {
+      try {
+        const data = await getMedia({ search: title, limit: 5 });
+        const matches = data.items.filter(
+          (i) => i.title.toLowerCase() === title.toLowerCase()
+        );
+        setDuplicates(matches);
+      } catch { /* ignore */ }
+    }, 300);
+  }
 
+  async function handleFetchMetadata() {
+    const title = form.title.trim();
+    if (!title) return;
+    setFetching(true);
+    setFetchError(null);
+    try {
+      const meta = await lookupMetadata(title, form.year || undefined);
+      setForm((f) => ({
+        ...f,
+        director:    meta.director    ?? f.director,
+        genre:       meta.genre       ?? f.genre,
+        runtime:     meta.runtime     != null ? String(meta.runtime) : f.runtime,
+        mpaa_rating: meta.mpaa_rating ?? f.mpaa_rating,
+        plot:        meta.plot        ?? f.plot,
+        cover_url:   meta.cover_url   ?? f.cover_url,
+        imdb_id:     meta.imdb_id     ?? f.imdb_id,
+        year:        meta.year        != null && !f.year ? String(meta.year) : f.year,
+      }));
+    } catch (err) {
+      setFetchError(err.message);
+    } finally {
+      setFetching(false);
+    }
+  }
+
+  function handleSubmit() {
+    if (!form.title.trim()) { setTitleError(true); return; }
     const payload = {
       ...form,
-      year: form.year !== "" ? parseInt(form.year) || null : null,
-      runtime: form.runtime !== "" ? parseInt(form.runtime) || null : null,
+      year:      form.year      !== "" ? parseInt(form.year)      || null : null,
+      runtime:   form.runtime   !== "" ? parseInt(form.runtime)   || null : null,
       my_rating: form.my_rating !== "" ? parseFloat(form.my_rating) || null : null,
       physical_notes: form.physical_notes || null,
-      location: form.location || null,
-      loaned_to: form.loaned_to || null,
-      notes: form.notes || null,
-      director: form.director || null,
-      genre: form.genre || null,
-      mpaa_rating: form.mpaa_rating || null,
-      imdb_id: form.imdb_id || null,
-      tmdb_id: form.tmdb_id || null,
-      plot: form.plot || null,
-      cover_url: form.cover_url || null,
+      location:       form.location       || null,
+      loaned_to:      form.loaned_to      || null,
+      notes:          form.notes          || null,
+      director:       form.director       || null,
+      genre:          form.genre          || null,
+      mpaa_rating:    form.mpaa_rating    || null,
+      imdb_id:        form.imdb_id        || null,
+      tmdb_id:        form.tmdb_id        || null,
+      plot:           form.plot           || null,
+      cover_url:      form.cover_url      || null,
     };
-
     onSave(payload);
   }
 
@@ -109,18 +151,42 @@ export default function EditModal({ item, onSave, onClose }) {
           {/* Core */}
           <div className="form-section">
             <div className="form-section-title">Core</div>
-            <div className="form-row">
-              <div className={`form-field full${titleError ? " error" : ""}`}>
+
+            <div className="form-row" style={{ alignItems: "flex-end" }}>
+              <div className={`form-field${titleError ? " error" : ""}`} style={{ flex: 1 }}>
                 <label>Title *</label>
                 <input
                   type="text"
                   value={form.title}
                   onChange={(e) => set("title", e.target.value)}
+                  onBlur={handleTitleBlur}
                   autoFocus
                 />
                 {titleError && <span className="field-error">Title is required</span>}
               </div>
+              <button
+                className="btn btn-ghost fetch-meta-btn"
+                type="button"
+                disabled={!form.title.trim() || fetching}
+                onClick={handleFetchMetadata}
+                title="Auto-fill metadata from OMDB"
+                style={{ flexShrink: 0 }}
+              >
+                {fetching ? "Fetching…" : "🔍 Fetch Metadata"}
+              </button>
             </div>
+
+            {fetchError && (
+              <div className="fetch-error">{fetchError}</div>
+            )}
+
+            {duplicates.length > 0 && (
+              <div className="duplicate-warning">
+                ⚠ Already in collection:{" "}
+                {duplicates.map((d) => `${d.title}${d.year ? ` (${d.year})` : ""}`).join(", ")}
+              </div>
+            )}
+
             <div className="form-row">
               <div className="form-field">
                 <label>Type</label>
@@ -131,41 +197,22 @@ export default function EditModal({ item, onSave, onClose }) {
               </div>
               <div className="form-field">
                 <label>Year</label>
-                <input
-                  type="number"
-                  min="1888"
-                  max="2099"
-                  value={form.year}
-                  onChange={(e) => set("year", e.target.value)}
-                />
+                <input type="number" min="1888" max="2099" value={form.year} onChange={(e) => set("year", e.target.value)} />
               </div>
               <div className="form-field">
                 <label>Director</label>
-                <input
-                  type="text"
-                  value={form.director}
-                  onChange={(e) => set("director", e.target.value)}
-                />
+                <input type="text" value={form.director} onChange={(e) => set("director", e.target.value)} />
               </div>
             </div>
+
             <div className="form-row">
               <div className="form-field">
                 <label>Genre</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Comedy, Drama"
-                  value={form.genre}
-                  onChange={(e) => set("genre", e.target.value)}
-                />
+                <input type="text" placeholder="e.g. Comedy, Drama" value={form.genre} onChange={(e) => set("genre", e.target.value)} />
               </div>
               <div className="form-field">
                 <label>Runtime (min)</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={form.runtime}
-                  onChange={(e) => set("runtime", e.target.value)}
-                />
+                <input type="number" min="0" value={form.runtime} onChange={(e) => set("runtime", e.target.value)} />
               </div>
               <div className="form-field">
                 <label>MPAA Rating</label>
@@ -180,23 +227,39 @@ export default function EditModal({ item, onSave, onClose }) {
                 </select>
               </div>
             </div>
+
             <div className="form-row">
               <div className="form-field">
                 <label>IMDB ID</label>
-                <input
-                  type="text"
-                  value={form.imdb_id}
-                  onChange={(e) => set("imdb_id", e.target.value)}
-                />
+                <input type="text" value={form.imdb_id} onChange={(e) => set("imdb_id", e.target.value)} />
+              </div>
+              <div className="form-field">
+                <label>TMDB ID</label>
+                <input type="text" value={form.tmdb_id} onChange={(e) => set("tmdb_id", e.target.value)} />
               </div>
             </div>
+
+            <div className="form-row">
+              <div className="form-field full">
+                <label>Cover URL</label>
+                <input type="url" placeholder="https://…" value={form.cover_url} onChange={(e) => set("cover_url", e.target.value)} />
+              </div>
+            </div>
+
+            {form.cover_url && (
+              <div className="cover-preview">
+                <img
+                  src={form.cover_url}
+                  alt="Cover preview"
+                  onError={(e) => { e.target.style.display = "none"; }}
+                />
+              </div>
+            )}
+
             <div className="form-row">
               <div className="form-field full">
                 <label>Plot</label>
-                <textarea
-                  value={form.plot}
-                  onChange={(e) => set("plot", e.target.value)}
-                />
+                <textarea value={form.plot} onChange={(e) => set("plot", e.target.value)} />
               </div>
             </div>
           </div>
@@ -206,16 +269,12 @@ export default function EditModal({ item, onSave, onClose }) {
             <div className="form-section-title">Physical</div>
             <div className="checkbox-group">
               {[
-                { key: "physical_4k", label: "4K Ultra HD" },
+                { key: "physical_4k",     label: "4K Ultra HD" },
                 { key: "physical_bluray", label: "Blu-ray" },
-                { key: "physical_dvd", label: "DVD" },
+                { key: "physical_dvd",    label: "DVD" },
               ].map(({ key, label }) => (
                 <label key={key} className="checkbox-item">
-                  <input
-                    type="checkbox"
-                    checked={form[key]}
-                    onChange={(e) => set(key, e.target.checked)}
-                  />
+                  <input type="checkbox" checked={form[key]} onChange={(e) => set(key, e.target.checked)} />
                   {label}
                 </label>
               ))}
@@ -223,12 +282,7 @@ export default function EditModal({ item, onSave, onClose }) {
             <div className="form-row">
               <div className="form-field full">
                 <label>Physical Notes</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Blu-ray+DVD combo, Collector's Edition"
-                  value={form.physical_notes}
-                  onChange={(e) => set("physical_notes", e.target.value)}
-                />
+                <input type="text" placeholder="e.g. Blu-ray+DVD combo, Collector's Edition" value={form.physical_notes} onChange={(e) => set("physical_notes", e.target.value)} />
               </div>
             </div>
           </div>
@@ -238,16 +292,12 @@ export default function EditModal({ item, onSave, onClose }) {
             <div className="form-section-title">Digital</div>
             <div className="checkbox-group">
               {[
-                { key: "digital_apple_tv", label: "Apple TV" },
-                { key: "digital_plex", label: "Plex" },
+                { key: "digital_apple_tv",        label: "Apple TV" },
+                { key: "digital_plex",            label: "Plex" },
                 { key: "digital_movies_anywhere", label: "Movies Anywhere" },
               ].map(({ key, label }) => (
                 <label key={key} className="checkbox-item">
-                  <input
-                    type="checkbox"
-                    checked={form[key]}
-                    onChange={(e) => set(key, e.target.checked)}
-                  />
+                  <input type="checkbox" checked={form[key]} onChange={(e) => set(key, e.target.checked)} />
                   {label}
                 </label>
               ))}
@@ -269,11 +319,7 @@ export default function EditModal({ item, onSave, onClose }) {
               </div>
               <div className="form-field">
                 <label>Loaned To</label>
-                <input
-                  type="text"
-                  value={form.loaned_to}
-                  onChange={(e) => set("loaned_to", e.target.value)}
-                />
+                <input type="text" value={form.loaned_to} onChange={(e) => set("loaned_to", e.target.value)} />
               </div>
             </div>
           </div>
@@ -283,32 +329,18 @@ export default function EditModal({ item, onSave, onClose }) {
             <div className="form-section-title">Personal</div>
             <div className="form-row" style={{ alignItems: "center" }}>
               <label className="checkbox-item">
-                <input
-                  type="checkbox"
-                  checked={form.watched}
-                  onChange={(e) => set("watched", e.target.checked)}
-                />
+                <input type="checkbox" checked={form.watched} onChange={(e) => set("watched", e.target.checked)} />
                 Watched
               </label>
               <div className="form-field" style={{ maxWidth: 160 }}>
                 <label>My Rating (0–10)</label>
-                <input
-                  type="number"
-                  min="0"
-                  max="10"
-                  step="0.1"
-                  value={form.my_rating}
-                  onChange={(e) => set("my_rating", e.target.value)}
-                />
+                <input type="number" min="0" max="10" step="0.1" value={form.my_rating} onChange={(e) => set("my_rating", e.target.value)} />
               </div>
             </div>
             <div className="form-row">
               <div className="form-field full">
                 <label>Notes</label>
-                <textarea
-                  value={form.notes}
-                  onChange={(e) => set("notes", e.target.value)}
-                />
+                <textarea value={form.notes} onChange={(e) => set("notes", e.target.value)} />
               </div>
             </div>
           </div>

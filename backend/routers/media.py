@@ -1,5 +1,11 @@
+import json
+import os
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException
+from urllib.error import URLError
+from urllib.parse import urlencode
+from urllib.request import urlopen
+
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
@@ -49,6 +55,64 @@ def get_stats(db: Session = Depends(get_db)):
         digital_movies_anywhere=digital_movies_anywhere,
         loaned_out=loaned_out,
     )
+
+
+def _safe_str(val):
+    if not val or val == "N/A":
+        return None
+    return val.strip()
+
+
+def _safe_int(val):
+    if not val or val == "N/A":
+        return None
+    try:
+        return int(str(val).replace(" min", "").replace(",", "")[:4])
+    except (ValueError, TypeError):
+        return None
+
+
+@router.get("/media/lookup")
+def lookup_metadata(
+    title: str = Query(...),
+    year: Optional[int] = Query(None),
+):
+    api_key = os.getenv("OMDB_API_KEY", "").strip()
+    if not api_key:
+        raise HTTPException(
+            status_code=503,
+            detail="OMDB_API_KEY is not configured. Add it to your .env file.",
+        )
+
+    params = {"apikey": api_key, "t": title}
+    if year:
+        params["y"] = year
+
+    url = "http://www.omdbapi.com/?" + urlencode(params)
+    try:
+        with urlopen(url, timeout=8) as resp:
+            data = json.loads(resp.read().decode())
+    except URLError as exc:
+        raise HTTPException(status_code=502, detail=f"OMDB request failed: {exc}")
+
+    if data.get("Response") == "False":
+        raise HTTPException(status_code=404, detail=data.get("Error", "Title not found"))
+
+    rated = _safe_str(data.get("Rated"))
+    if rated not in ("G", "PG", "PG-13", "R", "NC-17", "Not Rated"):
+        rated = None
+
+    return {
+        "title":       _safe_str(data.get("Title")),
+        "year":        _safe_int(data.get("Year", "")),
+        "director":    _safe_str(data.get("Director")),
+        "genre":       _safe_str(data.get("Genre")),
+        "runtime":     _safe_int(data.get("Runtime")),
+        "mpaa_rating": rated,
+        "plot":        _safe_str(data.get("Plot")),
+        "cover_url":   _safe_str(data.get("Poster")),
+        "imdb_id":     _safe_str(data.get("imdbID")),
+    }
 
 
 @router.get("/media/", response_model=MediaListResponse)

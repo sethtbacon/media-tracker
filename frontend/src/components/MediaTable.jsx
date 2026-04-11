@@ -18,17 +18,14 @@ const COLUMNS = [
   { key: "loaned_to",    label: "Loaned To",sortable: true },
   { key: "genre",        label: "Genre",    sortable: true },
   { key: "mpaa_rating",  label: "Rated",    sortable: true },
+  { key: "watched",      label: "W",        sortable: false },
   { key: "my_rating",    label: "★",        sortable: true },
 ];
 
-const BOOL_COLS = new Set([
-  "physical_4k", "physical_bluray", "physical_dvd",
-  "digital_apple_tv", "digital_plex", "digital_movies_anywhere",
-]);
-
-export default function MediaTable({ items, onEdit, onDelete, onLoadMore, hasMore }) {
+export default function MediaTable({ items, onEdit, onDelete, onLoadMore, hasMore, onToggleWatched, onInlineRate }) {
   const [sortCol, setSortCol] = useState("title");
   const [sortDir, setSortDir] = useState("asc");
+  const [editingRatingId, setEditingRatingId] = useState(null);
 
   function handleHeaderClick(col) {
     if (!col.sortable) return;
@@ -85,7 +82,18 @@ export default function MediaTable({ items, onEdit, onDelete, onLoadMore, hasMor
         <tbody>
           {sorted.map((item) => (
             <tr key={item.id}>
+              {/* Title + optional poster thumbnail */}
               <td className="title-cell">
+                {item.cover_url && (
+                  <a href={item.cover_url} target="_blank" rel="noreferrer">
+                    <img
+                      src={item.cover_url}
+                      alt=""
+                      className="poster-thumb"
+                      onError={(e) => { e.target.style.display = "none"; }}
+                    />
+                  </a>
+                )}
                 <a
                   className="title-link"
                   href="#"
@@ -94,7 +102,9 @@ export default function MediaTable({ items, onEdit, onDelete, onLoadMore, hasMor
                   {item.title}
                 </a>
               </td>
+
               <td>{item.year ?? ""}</td>
+
               <td>
                 {item.media_type && (
                   <span className={`type-badge ${item.media_type === "Movie" ? "movie" : "tv"}`}>
@@ -102,31 +112,74 @@ export default function MediaTable({ items, onEdit, onDelete, onLoadMore, hasMor
                   </span>
                 )}
               </td>
+
               {["physical_4k","physical_bluray","physical_dvd","digital_apple_tv","digital_plex","digital_movies_anywhere"].map((col) => (
                 <td key={col} style={{ textAlign: "center" }}>
                   <Dot value={item[col]} />
                 </td>
               ))}
+
               <td>{item.location ?? ""}</td>
+
               <td>
                 {item.loaned_to ? (
                   <span className="loaned-badge">{item.loaned_to}</span>
                 ) : ""}
               </td>
+
               <td style={{ maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis" }}>
                 {item.genre ?? ""}
               </td>
+
               <td>{item.mpaa_rating ?? ""}</td>
-              <td className="rating-cell">
-                {item.my_rating != null ? item.my_rating : ""}
+
+              {/* Inline watched toggle */}
+              <td style={{ textAlign: "center" }}>
+                <button
+                  className={`watched-toggle${item.watched ? " on" : ""}`}
+                  title={item.watched ? "Watched — click to unmark" : "Not watched — click to mark"}
+                  onClick={() => onToggleWatched(item.id, !item.watched)}
+                >
+                  {item.watched ? "✓" : "○"}
+                </button>
               </td>
+
+              {/* Inline rating */}
+              <td
+                className="rating-cell"
+                title="Click to rate"
+                onClick={() => { if (editingRatingId !== item.id) setEditingRatingId(item.id); }}
+              >
+                {editingRatingId === item.id ? (
+                  <input
+                    className="inline-rating-input"
+                    type="number"
+                    min="0"
+                    max="10"
+                    step="0.1"
+                    defaultValue={item.my_rating ?? ""}
+                    autoFocus
+                    onClick={(e) => e.stopPropagation()}
+                    onBlur={(e) => {
+                      const val = e.target.value.trim();
+                      onInlineRate(item.id, val !== "" ? parseFloat(val) : null);
+                      setEditingRatingId(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") e.target.blur();
+                      if (e.key === "Escape") { setEditingRatingId(null); }
+                    }}
+                  />
+                ) : (
+                  <span>
+                    {item.my_rating != null ? item.my_rating : <span className="muted">—</span>}
+                  </span>
+                )}
+              </td>
+
               <td>
                 <div className="actions-cell">
-                  <button
-                    className="btn-icon"
-                    title="Edit"
-                    onClick={() => onEdit(item)}
-                  >
+                  <button className="btn-icon" title="Edit" onClick={() => onEdit(item)}>
                     ✏️
                   </button>
                   <button

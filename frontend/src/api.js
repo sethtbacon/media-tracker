@@ -3,7 +3,7 @@ const BASE = "/api";
 function buildQuery(params) {
   const q = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) {
-    if (v !== null && v !== undefined && v !== "") {
+    if (v !== null && v !== undefined && v !== "" && v !== false) {
       q.append(k, v);
     }
   }
@@ -65,6 +65,18 @@ export async function importCSV(file, replaceAll) {
   return res.json();
 }
 
-export function exportCSV() {
-  window.location.href = `${BASE}/import/export/csv`;
+export function exportCSV(filters = {}) {
+  const qs = buildQuery(filters);
+  window.location.href = `${BASE}/import/export/csv${qs ? "?" + qs : ""}`;
+}
+
+export async function lookupMetadata(title, year) {
+  const qs = new URLSearchParams({ title });
+  if (year) qs.append("year", year);
+  const res = await fetch(`${BASE}/media/lookup?${qs}`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Lookup failed" }));
+    throw new Error(err.detail || "Lookup failed");
+  }
+  return res.json();
 }
