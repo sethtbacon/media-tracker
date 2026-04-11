@@ -1,0 +1,12 @@
+data/
+__pycache__/
+*.pyc
+node_modules/
+dist/
+.env
+*.db
+.DS_Store
+*.csv
+*:Zone.Identifier
+.venv/
+.playwright-mcp/

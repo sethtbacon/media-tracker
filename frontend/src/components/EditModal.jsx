@@ -1,0 +1,326 @@
+import { useState, useEffect } from "react";
+
+const EMPTY = {
+  title: "",
+  media_type: "Movie",
+  year: "",
+  director: "",
+  genre: "",
+  runtime: "",
+  mpaa_rating: "",
+  imdb_id: "",
+  plot: "",
+  physical_bluray: false,
+  physical_dvd: false,
+  physical_4k: false,
+  physical_notes: "",
+  digital_apple_tv: false,
+  digital_plex: false,
+  digital_movies_anywhere: false,
+  location: "",
+  loaned_to: "",
+  watched: false,
+  my_rating: "",
+  notes: "",
+  cover_url: "",
+  tmdb_id: "",
+};
+
+function toFormState(item) {
+  if (!item) return { ...EMPTY };
+  return {
+    ...item,
+    year: item.year ?? "",
+    runtime: item.runtime ?? "",
+    my_rating: item.my_rating ?? "",
+    physical_notes: item.physical_notes ?? "",
+    location: item.location ?? "",
+    loaned_to: item.loaned_to ?? "",
+    notes: item.notes ?? "",
+    director: item.director ?? "",
+    genre: item.genre ?? "",
+    mpaa_rating: item.mpaa_rating ?? "",
+    imdb_id: item.imdb_id ?? "",
+    tmdb_id: item.tmdb_id ?? "",
+    plot: item.plot ?? "",
+    cover_url: item.cover_url ?? "",
+  };
+}
+
+export default function EditModal({ item, onSave, onClose }) {
+  const [form, setForm] = useState(() => toFormState(item));
+  const [titleError, setTitleError] = useState(false);
+
+  useEffect(() => {
+    setForm(toFormState(item));
+    setTitleError(false);
+  }, [item]);
+
+  // Close on Escape
+  useEffect(() => {
+    function onKey(e) { if (e.key === "Escape") onClose(); }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  function set(key, value) {
+    setForm((f) => ({ ...f, [key]: value }));
+    if (key === "title") setTitleError(false);
+  }
+
+  function handleSubmit() {
+    if (!form.title.trim()) {
+      setTitleError(true);
+      return;
+    }
+
+    const payload = {
+      ...form,
+      year: form.year !== "" ? parseInt(form.year) || null : null,
+      runtime: form.runtime !== "" ? parseInt(form.runtime) || null : null,
+      my_rating: form.my_rating !== "" ? parseFloat(form.my_rating) || null : null,
+      physical_notes: form.physical_notes || null,
+      location: form.location || null,
+      loaned_to: form.loaned_to || null,
+      notes: form.notes || null,
+      director: form.director || null,
+      genre: form.genre || null,
+      mpaa_rating: form.mpaa_rating || null,
+      imdb_id: form.imdb_id || null,
+      tmdb_id: form.tmdb_id || null,
+      plot: form.plot || null,
+      cover_url: form.cover_url || null,
+    };
+
+    onSave(payload);
+  }
+
+  const isEdit = item !== null;
+
+  return (
+    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <div className="modal-header">
+          <h2>{isEdit ? "Edit Item" : "Add New Item"}</h2>
+          <button className="modal-close" onClick={onClose}>×</button>
+        </div>
+
+        <div className="modal-body">
+          {/* Core */}
+          <div className="form-section">
+            <div className="form-section-title">Core</div>
+            <div className="form-row">
+              <div className={`form-field full${titleError ? " error" : ""}`}>
+                <label>Title *</label>
+                <input
+                  type="text"
+                  value={form.title}
+                  onChange={(e) => set("title", e.target.value)}
+                  autoFocus
+                />
+                {titleError && <span className="field-error">Title is required</span>}
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-field">
+                <label>Type</label>
+                <select value={form.media_type} onChange={(e) => set("media_type", e.target.value)}>
+                  <option value="Movie">Movie</option>
+                  <option value="TV Series">TV Series</option>
+                </select>
+              </div>
+              <div className="form-field">
+                <label>Year</label>
+                <input
+                  type="number"
+                  min="1888"
+                  max="2099"
+                  value={form.year}
+                  onChange={(e) => set("year", e.target.value)}
+                />
+              </div>
+              <div className="form-field">
+                <label>Director</label>
+                <input
+                  type="text"
+                  value={form.director}
+                  onChange={(e) => set("director", e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-field">
+                <label>Genre</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Comedy, Drama"
+                  value={form.genre}
+                  onChange={(e) => set("genre", e.target.value)}
+                />
+              </div>
+              <div className="form-field">
+                <label>Runtime (min)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={form.runtime}
+                  onChange={(e) => set("runtime", e.target.value)}
+                />
+              </div>
+              <div className="form-field">
+                <label>MPAA Rating</label>
+                <select value={form.mpaa_rating} onChange={(e) => set("mpaa_rating", e.target.value)}>
+                  <option value="">—</option>
+                  <option value="G">G</option>
+                  <option value="PG">PG</option>
+                  <option value="PG-13">PG-13</option>
+                  <option value="R">R</option>
+                  <option value="NC-17">NC-17</option>
+                  <option value="Not Rated">Not Rated</option>
+                </select>
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-field">
+                <label>IMDB ID</label>
+                <input
+                  type="text"
+                  value={form.imdb_id}
+                  onChange={(e) => set("imdb_id", e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-field full">
+                <label>Plot</label>
+                <textarea
+                  value={form.plot}
+                  onChange={(e) => set("plot", e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Physical */}
+          <div className="form-section">
+            <div className="form-section-title">Physical</div>
+            <div className="checkbox-group">
+              {[
+                { key: "physical_4k", label: "4K Ultra HD" },
+                { key: "physical_bluray", label: "Blu-ray" },
+                { key: "physical_dvd", label: "DVD" },
+              ].map(({ key, label }) => (
+                <label key={key} className="checkbox-item">
+                  <input
+                    type="checkbox"
+                    checked={form[key]}
+                    onChange={(e) => set(key, e.target.checked)}
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+            <div className="form-row">
+              <div className="form-field full">
+                <label>Physical Notes</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Blu-ray+DVD combo, Collector's Edition"
+                  value={form.physical_notes}
+                  onChange={(e) => set("physical_notes", e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Digital */}
+          <div className="form-section">
+            <div className="form-section-title">Digital</div>
+            <div className="checkbox-group">
+              {[
+                { key: "digital_apple_tv", label: "Apple TV" },
+                { key: "digital_plex", label: "Plex" },
+                { key: "digital_movies_anywhere", label: "Movies Anywhere" },
+              ].map(({ key, label }) => (
+                <label key={key} className="checkbox-item">
+                  <input
+                    type="checkbox"
+                    checked={form[key]}
+                    onChange={(e) => set(key, e.target.checked)}
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Location & Loans */}
+          <div className="form-section">
+            <div className="form-section-title">Location &amp; Loans</div>
+            <div className="form-row">
+              <div className="form-field">
+                <label>Location</label>
+                <select value={form.location} onChange={(e) => set("location", e.target.value)}>
+                  <option value="">—</option>
+                  <option value="home">Home</option>
+                  <option value="van">Van</option>
+                  <option value="second location">Second Location</option>
+                </select>
+              </div>
+              <div className="form-field">
+                <label>Loaned To</label>
+                <input
+                  type="text"
+                  value={form.loaned_to}
+                  onChange={(e) => set("loaned_to", e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Personal */}
+          <div className="form-section">
+            <div className="form-section-title">Personal</div>
+            <div className="form-row" style={{ alignItems: "center" }}>
+              <label className="checkbox-item">
+                <input
+                  type="checkbox"
+                  checked={form.watched}
+                  onChange={(e) => set("watched", e.target.checked)}
+                />
+                Watched
+              </label>
+              <div className="form-field" style={{ maxWidth: 160 }}>
+                <label>My Rating (0–10)</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="10"
+                  step="0.1"
+                  value={form.my_rating}
+                  onChange={(e) => set("my_rating", e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-field full">
+                <label>Notes</label>
+                <textarea
+                  value={form.notes}
+                  onChange={(e) => set("notes", e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="modal-footer">
+          <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
+          <button className="btn btn-primary" onClick={handleSubmit}>
+            {isEdit ? "Save Changes" : "Add Item"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
