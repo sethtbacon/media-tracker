@@ -16,7 +16,6 @@ function formatPlatforms(item) {
   if (item.physical_dvd)             parts.push("DVD");
   if (item.digital_apple_tv)         parts.push("Apple TV");
   if (item.digital_plex)             parts.push("Plex");
-  if (item.digital_movies_anywhere)  parts.push("MA");
   return parts.join(" · ") || "—";
 }
 

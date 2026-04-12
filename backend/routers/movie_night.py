@@ -108,7 +108,6 @@ def _build_session_out(session: MovieNightSession, db: Session) -> SessionOut:
             display_order=si.display_order,
             digital_apple_tv=bool(m.digital_apple_tv),
             digital_plex=bool(m.digital_plex),
-            digital_movies_anywhere=bool(m.digital_movies_anywhere),
             physical_4k=bool(m.physical_4k),
             physical_bluray=bool(m.physical_bluray),
             physical_dvd=bool(m.physical_dvd),
@@ -196,7 +195,6 @@ def create_session(body: SessionCreate, db: Session = Depends(get_db)):
         q = q.filter(or_(
             MediaItem.digital_apple_tv == True,
             MediaItem.digital_plex == True,
-            MediaItem.digital_movies_anywhere == True,
         ))
     elif body.format_filter == "physical":
         q = q.filter(or_(

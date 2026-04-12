@@ -12,7 +12,6 @@ class MediaItemBase(BaseModel):
     physical_notes: Optional[str] = None
     digital_apple_tv: Optional[bool] = False
     digital_plex: Optional[bool] = False
-    digital_movies_anywhere: Optional[bool] = False
     location: Optional[str] = None
     loaned_to: Optional[str] = None
     watched: Optional[bool] = False
@@ -44,7 +43,6 @@ class MediaItemUpdate(BaseModel):
     physical_notes: Optional[str] = None
     digital_apple_tv: Optional[bool] = None
     digital_plex: Optional[bool] = None
-    digital_movies_anywhere: Optional[bool] = None
     location: Optional[str] = None
     loaned_to: Optional[str] = None
     watched: Optional[bool] = None
@@ -83,7 +81,6 @@ class StatsResponse(BaseModel):
     physical_4k: int
     digital_apple_tv: int
     digital_plex: int
-    digital_movies_anywhere: int
     loaned_out: int
     watched: int
 
@@ -133,7 +130,6 @@ class SessionItemOut(BaseModel):
     # availability flags for the matches view
     digital_apple_tv: bool = False
     digital_plex: bool = False
-    digital_movies_anywhere: bool = False
     physical_4k: bool = False
     physical_bluray: bool = False
     physical_dvd: bool = False

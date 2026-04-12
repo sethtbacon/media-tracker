@@ -19,7 +19,7 @@ class MediaItem(Base):
     # Digital platforms
     digital_apple_tv = Column(Boolean, default=False)
     digital_plex = Column(Boolean, default=False)
-    digital_movies_anywhere = Column(Boolean, default=False)
+    # digital_movies_anywhere kept as dead column (removed from app, all values were False)
 
     # Location & loans
     location = Column(String, nullable=True)

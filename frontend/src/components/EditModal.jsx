@@ -19,7 +19,6 @@ const EMPTY = {
   physical_notes: "",
   digital_apple_tv: false,
   digital_plex: false,
-  digital_movies_anywhere: false,
   location: "",
   loaned_to: "",
   watched: false,
@@ -314,7 +313,6 @@ export default function EditModal({ item, onSave, onClose }) {
               {[
                 { key: "digital_apple_tv",        label: "Apple TV" },
                 { key: "digital_plex",            label: "Plex" },
-                { key: "digital_movies_anywhere", label: "Movies Anywhere" },
               ].map(({ key, label }) => (
                 <label key={key} className="checkbox-item">
                   <input type="checkbox" checked={form[key]} onChange={(e) => set(key, e.target.checked)} />

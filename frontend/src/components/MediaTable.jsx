@@ -13,7 +13,6 @@ const COLUMNS = [
   { key: "physical_dvd", label: "DVD",      sortable: false },
   { key: "digital_apple_tv", label: "ATV",  sortable: false },
   { key: "digital_plex", label: "Plex",     sortable: false },
-  { key: "digital_movies_anywhere", label: "MA", sortable: false },
   { key: "location",     label: "Location", sortable: true },
   { key: "loaned_to",    label: "Loaned To",sortable: true },
   { key: "genre",        label: "Genre",    sortable: true },
@@ -111,7 +110,7 @@ export default function MediaTable({ items, onEdit, onDelete, onLoadMore, hasMor
                 )}
               </td>
 
-              {["physical_4k","physical_bluray","physical_dvd","digital_apple_tv","digital_plex","digital_movies_anywhere"].map((col) => (
+              {["physical_4k","physical_bluray","physical_dvd","digital_apple_tv","digital_plex"].map((col) => (
                 <td key={col} style={{ textAlign: "center" }}>
                   <Dot value={item[col]} />
                 </td>

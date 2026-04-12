@@ -18,7 +18,6 @@ export default function StatsBar({ stats, filters = {}, onToggleFilter }) {
     [
       { label: "Apple TV", value: stats.digital_apple_tv,        filterKey: "digital_apple_tv" },
       { label: "Plex",     value: stats.digital_plex,            filterKey: "digital_plex" },
-      { label: "MA",       value: stats.digital_movies_anywhere, filterKey: "digital_movies_anywhere" },
     ],
     [
       { label: "Loaned",   value: stats.loaned_out,              filterKey: "loaned",  warn: stats.loaned_out > 0 },

@@ -80,7 +80,6 @@ Single table: `media_items`
 | physical_notes           | String  | nullable                           |
 | digital_apple_tv         | Boolean | default false                      |
 | digital_plex             | Boolean | default false                      |
-| digital_movies_anywhere  | Boolean | default false                      |
 | location                 | String  | nullable — "home", "van", "second location" |
 | loaned_to                | String  | nullable                           |
 | watched                  | Boolean | default false                      |
@@ -117,7 +116,7 @@ DELETE /api/media/{id}      Delete item
 - `search` — ilike match on title OR director
 - `media_type` — "Movie" | "TV Series"
 - `physical_bluray`, `physical_dvd`, `physical_4k` — boolean filter
-- `digital_apple_tv`, `digital_plex`, `digital_movies_anywhere` — boolean filter
+- `digital_apple_tv`, `digital_plex` — boolean filter
 - `location` — ilike match
 - `loaned` — boolean; true = loaned_to IS NOT NULL AND != ""
 - `watched` — boolean
@@ -138,7 +137,6 @@ DELETE /api/media/{id}      Delete item
   "physical_4k": 2,
   "digital_apple_tv": 194,
   "digital_plex": 465,
-  "digital_movies_anywhere": 0,
   "loaned_out": 3
 }
 ```
@@ -157,12 +155,12 @@ Import response:
 
 **Import column mapping** — CSV headers are exactly:
 `Title, Media_Type, Physical_Bluray, Physical_DVD, Physical_4K, Physical_Notes,
-Digital_Apple_TV, Digital_Plex, Digital_Movies_Anywhere, Location, Watched,
-My_Rating, Loaned_To, Notes, Year, Director, Genre, Runtime, MPAA_Rating,
+Digital_Apple_TV, Digital_Plex, Location, Watched,
+Parent1_Rating, Parent2_Rating, Kids_Rating, Loaned_To, Notes, Year, Director, Genre, Runtime, MPAA_Rating,
 Plot, Cover_URL, IMDB_ID, TMDB_ID`
 
 Boolean columns accept: `Yes`, `yes`, `true`, `1`, `y` as truthy; blank/anything else = false.  
-Numeric columns (`Year`, `Runtime`, `My_Rating`) handle float-formatted integers from pandas (e.g. `2003.0`).  
+Numeric columns (`Year`, `Runtime`, `Parent1_Rating`, `Parent2_Rating`, `Kids_Rating`) handle float-formatted integers from pandas (e.g. `2003.0`).  
 `replace_all=true` deletes all existing rows before inserting.
 
 Export must produce a CSV with the same headers in the same order.
@@ -173,7 +171,7 @@ Export must produce a CSV with the same headers in the same order.
 
 ### `StatsBar`
 - Horizontal row of stat cards across the top, below the header
-- Cards: Total, Movies, TV Series, Physical, 4K, Blu-ray, DVD, Apple TV, Plex, MA, Loaned
+- Cards: Total, Movies, TV Series, Physical, 4K, Blu-ray, DVD, Apple TV, Plex, Loaned, Watched
 - "Loaned" card highlighted in amber when > 0
 
 ### `FilterBar`
@@ -181,13 +179,13 @@ Export must produce a CSV with the same headers in the same order.
 - Select: media type (All / Movie / TV Series)
 - Select: location (All / home / van / second location)
 - Select: MPAA rating (All / G / PG / PG-13 / R / NC-17 / Not Rated)
-- Toggle buttons for each format/platform: 4K, Blu-ray, DVD, Apple TV, Plex, MA, Loaned
+- Toggle buttons for each format/platform: 4K, Blu-ray, DVD, Apple TV, Plex, Loaned, Watched
   - Active = accent color; inactive = ghost style
 - "Clear" button resets all filters
 
 ### `MediaTable`
 - Sticky header row
-- Columns in order: Title, Year, Type, 4K, BD, DVD, ATV, Plex, MA, Location, Loaned To, Genre, Rated, ★
+- Columns in order: Title, Year, Type, 4K, BD, DVD, ATV, Plex, Location, Loaned To, Genre, Rated, W (watched toggle)
 - Boolean format columns shown as colored dots (green = yes, grey = no)
 - "Loaned To" shown as amber badge when populated
 - Title is clickable → opens EditModal
@@ -199,9 +197,9 @@ Export must produce a CSV with the same headers in the same order.
 - Grouped sections: Core, Physical, Digital, Location & Loans, Personal
 - Core: title (required), media_type select, year, director, genre, runtime, MPAA rating, IMDB ID, plot textarea
 - Physical: checkboxes for 4K/Blu-ray/DVD, physical_notes input
-- Digital: checkboxes for Apple TV / Plex / Movies Anywhere
+- Digital: checkboxes for Apple TV / Plex
 - Location & Loans: location select (home/van/second location), loaned_to text input
-- Personal: watched checkbox, my_rating number input, notes textarea
+- Personal: watched checkbox, per-person ratings (Parent 1, Parent 2, Kids — configurable names from Settings; Kids field shown only when kids_count > 0), notes textarea
 - Save / Cancel buttons in sticky footer
 
 ### `ImportPanel` (lives in the header)

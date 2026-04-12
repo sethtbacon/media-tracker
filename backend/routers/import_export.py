@@ -30,7 +30,6 @@ COLUMN_MAP = {
     "Physical_Notes": "physical_notes",
     "Digital_Apple_TV": "digital_apple_tv",
     "Digital_Plex": "digital_plex",
-    "Digital_Movies_Anywhere": "digital_movies_anywhere",
     "Location": "location",
     "Watched": "watched",
     "Parent1_Rating": "parent1_rating",
@@ -51,7 +50,7 @@ COLUMN_MAP = {
 
 BOOLEAN_FIELDS = {
     "physical_bluray", "physical_dvd", "physical_4k",
-    "digital_apple_tv", "digital_plex", "digital_movies_anywhere",
+    "digital_apple_tv", "digital_plex",
     "watched",
 }
 
@@ -155,7 +154,6 @@ EXPORT_COLUMNS = [
     ("Physical_Notes", "physical_notes"),
     ("Digital_Apple_TV", "digital_apple_tv"),
     ("Digital_Plex", "digital_plex"),
-    ("Digital_Movies_Anywhere", "digital_movies_anywhere"),
     ("Location", "location"),
     ("Watched", "watched"),
     ("Parent1_Rating", "parent1_rating"),
@@ -203,7 +201,6 @@ def export_csv(
     physical_4k: Optional[bool] = None,
     digital_apple_tv: Optional[bool] = None,
     digital_plex: Optional[bool] = None,
-    digital_movies_anywhere: Optional[bool] = None,
     location: Optional[str] = None,
     loaned: Optional[bool] = None,
     watched: Optional[bool] = None,
@@ -230,8 +227,6 @@ def export_csv(
         query = query.filter(MediaItem.digital_apple_tv == digital_apple_tv)
     if digital_plex is not None:
         query = query.filter(MediaItem.digital_plex == digital_plex)
-    if digital_movies_anywhere is not None:
-        query = query.filter(MediaItem.digital_movies_anywhere == digital_movies_anywhere)
     if location:
         query = query.filter(MediaItem.location.ilike(f"%{location}%"))
     if loaned is True:

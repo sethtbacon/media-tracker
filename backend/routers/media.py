@@ -35,7 +35,6 @@ def get_stats(db: Session = Depends(get_db)):
     physical_4k = db.query(func.count(MediaItem.id)).filter(MediaItem.physical_4k == True).scalar()
     digital_apple_tv = db.query(func.count(MediaItem.id)).filter(MediaItem.digital_apple_tv == True).scalar()
     digital_plex = db.query(func.count(MediaItem.id)).filter(MediaItem.digital_plex == True).scalar()
-    digital_movies_anywhere = db.query(func.count(MediaItem.id)).filter(MediaItem.digital_movies_anywhere == True).scalar()
 
     loaned_out = db.query(func.count(MediaItem.id)).filter(
         MediaItem.loaned_to != None,
@@ -54,7 +53,6 @@ def get_stats(db: Session = Depends(get_db)):
         physical_4k=physical_4k,
         digital_apple_tv=digital_apple_tv,
         digital_plex=digital_plex,
-        digital_movies_anywhere=digital_movies_anywhere,
         loaned_out=loaned_out,
         watched=watched,
     )
@@ -132,7 +130,6 @@ def list_media(
     physical_4k: Optional[bool] = None,
     digital_apple_tv: Optional[bool] = None,
     digital_plex: Optional[bool] = None,
-    digital_movies_anywhere: Optional[bool] = None,
     location: Optional[str] = None,
     loaned: Optional[bool] = None,
     watched: Optional[bool] = None,
@@ -164,8 +161,6 @@ def list_media(
         query = query.filter(MediaItem.digital_apple_tv == digital_apple_tv)
     if digital_plex is not None:
         query = query.filter(MediaItem.digital_plex == digital_plex)
-    if digital_movies_anywhere is not None:
-        query = query.filter(MediaItem.digital_movies_anywhere == digital_movies_anywhere)
     if location:
         query = query.filter(MediaItem.location.ilike(f"%{location}%"))
     if loaned is True:

@@ -11,7 +11,6 @@ const DEFAULTS = {
   physical_dvd: false,
   digital_apple_tv: false,
   digital_plex: false,
-  digital_movies_anywhere: false,
   loaned: false,
   watched: false,
 };
