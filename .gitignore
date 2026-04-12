@@ -10,3 +10,5 @@ dist/
 *:Zone.Identifier
 .venv/
 .playwright-mcp/
+Examples/
+Media_Collection_Database_Logic.md

@@ -149,7 +149,7 @@ export default function SettingsPage() {
         <p className="settings-description">
           The OMDB API key enables automatic metadata lookup (title, director, genre, poster) when
           adding or editing items. Get a free key at{" "}
-          <span className="settings-link">omdbapi.com</span>.
+          <a href="https://www.omdbapi.com/apikey.aspx" target="_blank" rel="noreferrer" className="settings-link">omdbapi.com</a>.
         </p>
 
         <form className="settings-form" onSubmit={handleSaveKey}>
