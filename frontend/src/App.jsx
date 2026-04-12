@@ -1,10 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
-import { getMedia, getStats, createMedia, updateMedia, deleteMedia } from "./api.js";
+import { getMedia, getStats, createMedia, updateMedia, deleteMedia, getMediaById } from "./api.js";
 import StatsBar from "./components/StatsBar.jsx";
 import FilterBar, { FILTER_DEFAULTS } from "./components/FilterBar.jsx";
 import MediaTable from "./components/MediaTable.jsx";
 import EditModal from "./components/EditModal.jsx";
 import ImportPanel from "./components/ImportPanel.jsx";
+import SettingsPage from "./components/SettingsPage.jsx";
+import PosterGrid from "./components/PosterGrid.jsx";
+import MovieNightPage from "./components/MovieNightPage.jsx";
 
 const PAGE_SIZE = 200;
 
@@ -19,6 +22,11 @@ export default function App() {
   // Modal state: null = new item, object = edit item, modalOpen controls visibility
   const [modalItem, setModalItem] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [displayMode, setDisplayMode] = useState("posters"); // "table" | "posters"
+
+  // Check URL for ?session= param to auto-navigate to Movie Night
+  const urlSession = new URLSearchParams(window.location.search).get("session");
+  const [view, setView] = useState(urlSession ? "movie-night" : "library"); // "library" | "settings" | "movie-night"
 
   const fetchStats = useCallback(async () => {
     try { setStats(await getStats()); } catch (e) { console.error(e); }
@@ -101,13 +109,14 @@ export default function App() {
     }
   }
 
-  async function handleInlineRate(id, my_rating) {
-    // Optimistic update
-    setItems((prev) => prev.map((i) => i.id === id ? { ...i, my_rating } : i));
+  async function handleOpenInLibrary(id) {
     try {
-      await updateMedia(id, { my_rating });
+      const item = await getMediaById(id);
+      setView("library");
+      setModalItem(item);
+      setModalOpen(true);
     } catch (e) {
-      console.error("Failed to update rating", e);
+      console.error("Failed to open item in library", e);
     }
   }
 
@@ -122,28 +131,71 @@ export default function App() {
   return (
     <div className="app">
       <header className="header">
-        <span className="header-title">🎬 Media Tracker</span>
-        <div className="header-actions">
-          <ImportPanel onImportDone={handleImportDone} filters={filters} />
-          <button className="btn btn-primary" onClick={openNew}>
-            + Add Item
+        <span className="header-title">🎬 <span className="header-title-text">Media Tracker</span></span>
+        <nav className="header-nav">
+          <button
+            className={`nav-btn${view === "library" ? " active" : ""}`}
+            onClick={() => setView("library")}
+          >
+            Library
           </button>
+          <button
+            className={`nav-btn${view === "settings" ? " active" : ""}`}
+            onClick={() => setView("settings")}
+          >
+            Settings
+          </button>
+          <button
+            className={`nav-btn${view === "movie-night" ? " active" : ""}`}
+            onClick={() => setView("movie-night")}
+          >
+            Movie Night
+          </button>
+        </nav>
+        <div className="header-actions">
+          {view === "library" && (
+            <>
+              <ImportPanel onImportDone={handleImportDone} filters={filters} />
+              <button className="btn btn-primary" onClick={openNew}>
+                + Add Item
+              </button>
+            </>
+          )}
         </div>
       </header>
 
-      <StatsBar stats={stats} />
+      {view === "library" && (
+        <>
+          <StatsBar stats={stats} filters={filters} onToggleFilter={setFilters} />
+          <FilterBar
+            filters={filters}
+            onChange={setFilters}
+            displayMode={displayMode}
+            onDisplayModeChange={setDisplayMode}
+          />
+          {displayMode === "table" ? (
+            <MediaTable
+              items={items}
+              onEdit={openEdit}
+              onDelete={handleDelete}
+              onLoadMore={handleLoadMore}
+              hasMore={hasMore}
+              onToggleWatched={handleToggleWatched}
+            />
+          ) : (
+            <PosterGrid
+              items={items}
+              onEdit={openEdit}
+              onLoadMore={handleLoadMore}
+              hasMore={hasMore}
+            />
+          )}
+        </>
+      )}
 
-      <FilterBar filters={filters} onChange={setFilters} />
+      {view === "settings" && <SettingsPage />}
 
-      <MediaTable
-        items={items}
-        onEdit={openEdit}
-        onDelete={handleDelete}
-        onLoadMore={handleLoadMore}
-        hasMore={hasMore}
-        onToggleWatched={handleToggleWatched}
-        onInlineRate={handleInlineRate}
-      />
+      {view === "movie-night" && <MovieNightPage initialSessionCode={urlSession} onOpenInLibrary={handleOpenInLibrary} />}
 
       {modalOpen && (
         <EditModal

@@ -1,15 +1,21 @@
 import io
 import csv
+import json
+import os
+import time
 from typing import Optional
+from urllib.error import URLError
+from urllib.parse import urlencode
+from urllib.request import urlopen
 
 import pandas as pd
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import StreamingResponse
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import MediaItem
+from models import MediaItem, SystemSetting
 from schemas import ImportResponse
 
 router = APIRouter()
@@ -27,7 +33,9 @@ COLUMN_MAP = {
     "Digital_Movies_Anywhere": "digital_movies_anywhere",
     "Location": "location",
     "Watched": "watched",
-    "My_Rating": "my_rating",
+    "Parent1_Rating": "parent1_rating",
+    "Parent2_Rating": "parent2_rating",
+    "Kids_Rating": "kids_rating",
     "Loaned_To": "loaned_to",
     "Notes": "notes",
     "Year": "year",
@@ -48,6 +56,8 @@ BOOLEAN_FIELDS = {
 }
 
 INT_FIELDS = {"year", "runtime"}
+
+FLOAT_FIELDS = {"parent1_rating", "parent2_rating", "kids_rating"}
 
 
 def parse_bool(value) -> bool:
@@ -119,7 +129,7 @@ async def import_csv(
                     item_data[model_field] = parse_bool(raw)
                 elif model_field in INT_FIELDS:
                     item_data[model_field] = parse_int(raw)
-                elif model_field == "my_rating":
+                elif model_field in FLOAT_FIELDS:
                     item_data[model_field] = parse_float(raw)
                 else:
                     item_data[model_field] = parse_str(raw)
@@ -148,7 +158,9 @@ EXPORT_COLUMNS = [
     ("Digital_Movies_Anywhere", "digital_movies_anywhere"),
     ("Location", "location"),
     ("Watched", "watched"),
-    ("My_Rating", "my_rating"),
+    ("Parent1_Rating", "parent1_rating"),
+    ("Parent2_Rating", "parent2_rating"),
+    ("Kids_Rating", "kids_rating"),
     ("Loaned_To", "loaned_to"),
     ("Notes", "notes"),
     ("Year", "year"),
@@ -237,3 +249,109 @@ def export_csv(
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=media_collection.csv"},
     )
+
+
+def _get_omdb_key(db: Session) -> Optional[str]:
+    setting = db.query(SystemSetting).filter(SystemSetting.key == "omdb_api_key").first()
+    key = (setting.value if setting and setting.value else "").strip()
+    return key or os.getenv("OMDB_API_KEY", "").strip() or None
+
+
+def _safe_str(val):
+    if not val or val == "N/A":
+        return None
+    return val.strip()
+
+
+def _safe_int(val):
+    if not val or val == "N/A":
+        return None
+    try:
+        return int(str(val).replace(" min", "").replace(",", "")[:4])
+    except (ValueError, TypeError):
+        return None
+
+
+@router.get("/import/fetch-metadata/status")
+def fetch_metadata_status(db: Session = Depends(get_db)):
+    """Return count of items that have not had OMDB metadata pulled yet."""
+    missing = db.query(func.count(MediaItem.id)).filter(
+        or_(MediaItem.imdb_id == None, MediaItem.imdb_id == "")
+    ).scalar()
+    return {"missing": missing}
+
+
+@router.post("/import/fetch-metadata")
+def fetch_missing_metadata(
+    batch_size: int = Query(default=100, ge=1, le=200),
+    db: Session = Depends(get_db),
+):
+    """Fetch OMDB metadata for a batch of items that have no imdb_id yet."""
+    api_key = _get_omdb_key(db)
+    if not api_key:
+        raise HTTPException(
+            status_code=503,
+            detail="OMDB API key is not configured. Add it in Settings.",
+        )
+
+    total_missing = db.query(func.count(MediaItem.id)).filter(
+        or_(MediaItem.imdb_id == None, MediaItem.imdb_id == "")
+    ).scalar()
+
+    items = (
+        db.query(MediaItem)
+        .filter(or_(MediaItem.imdb_id == None, MediaItem.imdb_id == ""))
+        .order_by(MediaItem.title)
+        .limit(batch_size)
+        .all()
+    )
+
+    updated = 0
+    not_found = 0
+    failed = 0
+
+    for item in items:
+        params = {"apikey": api_key, "t": item.title}
+        if item.year:
+            params["y"] = item.year
+        url = "http://www.omdbapi.com/?" + urlencode(params)
+        try:
+            with urlopen(url, timeout=8) as resp:
+                data = json.loads(resp.read().decode())
+        except URLError:
+            failed += 1
+            time.sleep(0.25)
+            continue
+
+        if data.get("Response") == "False":
+            # Mark as attempted so it doesn't re-queue on every run
+            item.imdb_id = "NOT_FOUND"
+            not_found += 1
+            time.sleep(0.25)
+            continue
+
+        item.director    = _safe_str(data.get("Director"))    or item.director
+        item.genre       = _safe_str(data.get("Genre"))       or item.genre
+        item.runtime     = _safe_int(data.get("Runtime"))     or item.runtime
+        item.plot        = _safe_str(data.get("Plot"))        or item.plot
+        item.cover_url   = _safe_str(data.get("Poster"))      or item.cover_url
+        item.imdb_id     = _safe_str(data.get("imdbID"))
+        if not item.year:
+            item.year    = _safe_int(data.get("Year", ""))
+        rated = _safe_str(data.get("Rated"))
+        if rated in ("G", "PG", "PG-13", "R", "NC-17", "Not Rated"):
+            item.mpaa_rating = rated
+
+        updated += 1
+        time.sleep(0.25)
+
+    db.commit()
+
+    remaining = max(0, total_missing - len(items))
+    return {
+        "updated":   updated,
+        "not_found": not_found,
+        "failed":    failed,
+        "processed": len(items),
+        "remaining": remaining,
+    }

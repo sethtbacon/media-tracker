@@ -70,6 +70,39 @@ export function exportCSV(filters = {}) {
   window.location.href = `${BASE}/import/export/csv${qs ? "?" + qs : ""}`;
 }
 
+export async function fetchMetadataStatus() {
+  const res = await fetch(`${BASE}/import/fetch-metadata/status`);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function fetchMissingMetadata(batchSize = 100) {
+  const res = await fetch(`${BASE}/import/fetch-metadata?batch_size=${batchSize}`, {
+    method: "POST",
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Request failed" }));
+    throw new Error(err.detail || "Request failed");
+  }
+  return res.json();
+}
+
+export async function getSettings() {
+  const res = await fetch(`${BASE}/settings/`);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function updateSetting(key, value) {
+  const res = await fetch(`${BASE}/settings/${encodeURIComponent(key)}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ value }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
 export async function lookupMetadata(title, year) {
   const qs = new URLSearchParams({ title });
   if (year) qs.append("year", year);
@@ -78,5 +111,55 @@ export async function lookupMetadata(title, year) {
     const err = await res.json().catch(() => ({ detail: "Lookup failed" }));
     throw new Error(err.detail || "Lookup failed");
   }
+  return res.json();
+}
+
+// ── Movie Night ──────────────────────────────────────────────────────────────
+
+export async function createMovieNightSession(body) {
+  const res = await fetch(`${BASE}/movie-night/sessions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function getMovieNightSession(code) {
+  const res = await fetch(`${BASE}/movie-night/sessions/${encodeURIComponent(code)}`);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function submitSwipe(code, body) {
+  const res = await fetch(`${BASE}/movie-night/sessions/${encodeURIComponent(code)}/swipe`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function endMovieNightSession(code) {
+  const res = await fetch(`${BASE}/movie-night/sessions/${encodeURIComponent(code)}/end`, {
+    method: "POST",
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function getMovieNightHistory() {
+  const res = await fetch(`${BASE}/movie-night/sessions`);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function deleteMovieNightSession(code) {
+  const res = await fetch(`${BASE}/movie-night/sessions/${encodeURIComponent(code)}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) throw new Error(await res.text());
   return res.json();
 }

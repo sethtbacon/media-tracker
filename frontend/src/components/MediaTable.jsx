@@ -19,13 +19,11 @@ const COLUMNS = [
   { key: "genre",        label: "Genre",    sortable: true },
   { key: "mpaa_rating",  label: "Rated",    sortable: true },
   { key: "watched",      label: "W",        sortable: false },
-  { key: "my_rating",    label: "★",        sortable: true },
 ];
 
-export default function MediaTable({ items, onEdit, onDelete, onLoadMore, hasMore, onToggleWatched, onInlineRate }) {
+export default function MediaTable({ items, onEdit, onDelete, onLoadMore, hasMore, onToggleWatched }) {
   const [sortCol, setSortCol] = useState("title");
   const [sortDir, setSortDir] = useState("asc");
-  const [editingRatingId, setEditingRatingId] = useState(null);
 
   function handleHeaderClick(col) {
     if (!col.sortable) return;
@@ -142,39 +140,6 @@ export default function MediaTable({ items, onEdit, onDelete, onLoadMore, hasMor
                 >
                   {item.watched ? "✓" : "○"}
                 </button>
-              </td>
-
-              {/* Inline rating */}
-              <td
-                className="rating-cell"
-                title="Click to rate"
-                onClick={() => { if (editingRatingId !== item.id) setEditingRatingId(item.id); }}
-              >
-                {editingRatingId === item.id ? (
-                  <input
-                    className="inline-rating-input"
-                    type="number"
-                    min="0"
-                    max="10"
-                    step="0.1"
-                    defaultValue={item.my_rating ?? ""}
-                    autoFocus
-                    onClick={(e) => e.stopPropagation()}
-                    onBlur={(e) => {
-                      const val = e.target.value.trim();
-                      onInlineRate(item.id, val !== "" ? parseFloat(val) : null);
-                      setEditingRatingId(null);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") e.target.blur();
-                      if (e.key === "Escape") { setEditingRatingId(null); }
-                    }}
-                  />
-                ) : (
-                  <span>
-                    {item.my_rating != null ? item.my_rating : <span className="muted">—</span>}
-                  </span>
-                )}
               </td>
 
               <td>

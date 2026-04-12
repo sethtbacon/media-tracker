@@ -10,7 +10,7 @@ from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import MediaItem
+from models import MediaItem, SystemSetting
 from schemas import MediaItemCreate, MediaItemOut, MediaItemUpdate, MediaListResponse, StatsResponse
 
 router = APIRouter()
@@ -42,6 +42,8 @@ def get_stats(db: Session = Depends(get_db)):
         MediaItem.loaned_to != "",
     ).scalar()
 
+    watched = db.query(func.count(MediaItem.id)).filter(MediaItem.watched == True).scalar()
+
     return StatsResponse(
         total=total,
         movies=movies,
@@ -54,6 +56,7 @@ def get_stats(db: Session = Depends(get_db)):
         digital_plex=digital_plex,
         digital_movies_anywhere=digital_movies_anywhere,
         loaned_out=loaned_out,
+        watched=watched,
     )
 
 
@@ -76,12 +79,17 @@ def _safe_int(val):
 def lookup_metadata(
     title: str = Query(...),
     year: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
 ):
-    api_key = os.getenv("OMDB_API_KEY", "").strip()
+    # DB setting takes precedence over env var
+    setting = db.query(SystemSetting).filter(SystemSetting.key == "omdb_api_key").first()
+    api_key = (setting.value if setting and setting.value else "").strip()
+    if not api_key:
+        api_key = os.getenv("OMDB_API_KEY", "").strip()
     if not api_key:
         raise HTTPException(
             status_code=503,
-            detail="OMDB_API_KEY is not configured. Add it to your .env file.",
+            detail="OMDB API key is not configured. Add it in Settings or set OMDB_API_KEY in your .env file.",
         )
 
     params = {"apikey": api_key, "t": title}

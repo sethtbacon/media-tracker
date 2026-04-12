@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const DEFAULTS = {
   search: "",
@@ -18,11 +18,12 @@ const DEFAULTS = {
 
 export { DEFAULTS as FILTER_DEFAULTS };
 
-export default function FilterBar({ filters, onChange }) {
+export default function FilterBar({ filters, onChange, displayMode, onDisplayModeChange }) {
   const searchDebounce = useRef(null);
   const genreDebounce = useRef(null);
   const searchRef = useRef(null);
   const genreRef = useRef(null);
+  const [secondaryOpen, setSecondaryOpen] = useState(false);
 
   function handleSearch(e) {
     const value = e.target.value;
@@ -52,102 +53,105 @@ export default function FilterBar({ filters, onChange }) {
     onChange({ ...filters, [key]: value });
   }
 
-  function toggleBool(key) {
-    onChange({ ...filters, [key]: !filters[key] });
-  }
-
   function clear() {
     if (searchRef.current) searchRef.current.value = "";
     if (genreRef.current) genreRef.current.value = "";
     onChange({ ...DEFAULTS });
+    setSecondaryOpen(false);
   }
 
-  const toggles = [
-    { key: "physical_4k",            label: "4K" },
-    { key: "physical_bluray",         label: "Blu-ray" },
-    { key: "physical_dvd",            label: "DVD" },
-    { key: "digital_apple_tv",        label: "Apple TV" },
-    { key: "digital_plex",            label: "Plex" },
-    { key: "digital_movies_anywhere", label: "MA" },
-    { key: "loaned",                  label: "Loaned" },
-    { key: "watched",                 label: "Watched" },
-  ];
+  // Count active filters (excluding search which is always visible)
+  const secondaryActiveCount = Object.entries(filters).filter(([k, v]) => {
+    if (k === "search") return false; // search is always shown
+    if (typeof v === "boolean") return v;
+    if (typeof v === "string") return v !== "";
+    return false;
+  }).length;
+
+  const totalActiveCount = Object.entries(filters).filter(([, v]) => {
+    if (typeof v === "boolean") return v;
+    if (typeof v === "string") return v !== "";
+    return false;
+  }).length;
 
   return (
-    <div className="filter-bar">
+    <div className={`filter-bar${secondaryOpen ? " filter-bar-open" : ""}`}>
+      {/* Always visible: search + mobile filter toggle */}
       <input
         ref={searchRef}
-        className="filter-search"
+        className="filter-search filter-search-main"
         type="text"
-        placeholder="Search title or director…"
+        placeholder="Search title or director..."
         defaultValue={filters.search}
         onChange={handleSearch}
       />
 
-      <input
-        ref={genreRef}
-        className="filter-search"
-        type="text"
-        placeholder="Genre…"
-        style={{ width: 120 }}
-        defaultValue={filters.genre}
-        onChange={handleGenre}
-      />
-
-      <select
-        className="filter-select"
-        value={filters.media_type}
-        onChange={(e) => handleSelect("media_type", e.target.value)}
+      {/* Mobile-only: expand/collapse secondary filters */}
+      <button
+        className={`btn filter-expand-btn${secondaryActiveCount > 0 ? " has-active" : ""}`}
+        onClick={() => setSecondaryOpen((o) => !o)}
       >
-        <option value="">All Types</option>
-        <option value="Movie">Movie</option>
-        <option value="TV Series">TV Series</option>
-      </select>
-
-      <select
-        className="filter-select"
-        value={filters.location}
-        onChange={(e) => handleSelect("location", e.target.value)}
-      >
-        <option value="">All Locations</option>
-        <option value="home">Home</option>
-        <option value="van">Van</option>
-        <option value="second location">Second Location</option>
-      </select>
-
-      <select
-        className="filter-select"
-        value={filters.mpaa_rating}
-        onChange={(e) => handleSelect("mpaa_rating", e.target.value)}
-      >
-        <option value="">All Ratings</option>
-        <option value="G">G</option>
-        <option value="PG">PG</option>
-        <option value="PG-13">PG-13</option>
-        <option value="R">R</option>
-        <option value="NC-17">NC-17</option>
-        <option value="Not Rated">Not Rated</option>
-      </select>
-
-      <div className="filter-divider" />
-
-      <div className="filter-toggles">
-        {toggles.map(({ key, label }) => (
-          <button
-            key={key}
-            className={`toggle-btn${filters[key] ? " active" : ""}`}
-            onClick={() => toggleBool(key)}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      <div className="filter-divider" />
-
-      <button className="btn btn-ghost" onClick={clear}>
-        Clear
+        {secondaryActiveCount > 0 ? `Filters (${secondaryActiveCount})` : "Filters"}
+        <span className="filter-expand-chevron">{secondaryOpen ? "▲" : "▼"}</span>
       </button>
+
+      {/* Secondary filters — always visible on desktop, toggle on mobile */}
+      <div className="filter-secondary">
+        <input
+          ref={genreRef}
+          className="filter-search"
+          type="text"
+          placeholder="Genre..."
+          defaultValue={filters.genre}
+          onChange={handleGenre}
+        />
+
+        <select
+          className="filter-select"
+          value={filters.location}
+          onChange={(e) => handleSelect("location", e.target.value)}
+        >
+          <option value="">All Locations</option>
+          <option value="home">Home</option>
+          <option value="van">Van</option>
+          <option value="second location">Second Location</option>
+        </select>
+
+        <select
+          className="filter-select"
+          value={filters.mpaa_rating}
+          onChange={(e) => handleSelect("mpaa_rating", e.target.value)}
+        >
+          <option value="">All Ratings</option>
+          <option value="G">G</option>
+          <option value="PG">PG</option>
+          <option value="PG-13">PG-13</option>
+          <option value="R">R</option>
+          <option value="NC-17">NC-17</option>
+          <option value="Not Rated">Not Rated</option>
+        </select>
+
+        {onDisplayModeChange && (
+          <div className="display-toggle">
+            <button
+              className={`display-toggle-btn${displayMode === "table" ? " active" : ""}`}
+              onClick={() => onDisplayModeChange("table")}
+            >
+              List
+            </button>
+            <button
+              className={`display-toggle-btn${displayMode === "posters" ? " active" : ""}`}
+              onClick={() => onDisplayModeChange("posters")}
+            >
+              Grid
+            </button>
+          </div>
+        )}
+
+        <button className="btn btn-ghost" onClick={clear}>
+          {totalActiveCount > 0 ? `Clear (${totalActiveCount})` : "Clear"}
+        </button>
+      </div>
     </div>
   );
 }

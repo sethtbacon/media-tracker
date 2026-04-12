@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { lookupMetadata, getMedia } from "../api.js";
+import { lookupMetadata, getMedia, getSettings } from "../api.js";
 
 const EMPTY = {
   title: "",
@@ -23,7 +23,9 @@ const EMPTY = {
   location: "",
   loaned_to: "",
   watched: false,
-  my_rating: "",
+  parent1_rating: "",
+  parent2_rating: "",
+  kids_rating: "",
   notes: "",
 };
 
@@ -33,7 +35,9 @@ function toFormState(item) {
     ...item,
     year: item.year ?? "",
     runtime: item.runtime ?? "",
-    my_rating: item.my_rating ?? "",
+    parent1_rating: item.parent1_rating ?? "",
+    parent2_rating: item.parent2_rating ?? "",
+    kids_rating: item.kids_rating ?? "",
     physical_notes: item.physical_notes ?? "",
     location: item.location ?? "",
     loaned_to: item.loaned_to ?? "",
@@ -54,7 +58,21 @@ export default function EditModal({ item, onSave, onClose }) {
   const [duplicates, setDuplicates] = useState([]);
   const [fetching, setFetching] = useState(false);
   const [fetchError, setFetchError] = useState(null);
+  const [ratingNames, setRatingNames] = useState({ p1: "Parent 1", p2: "Parent 2", kids: "Kids", kidsCount: 0 });
   const dupDebounce = useRef(null);
+
+  // Load household member names from settings
+  useEffect(() => {
+    getSettings().then((settings) => {
+      const get = (key, def) => settings.find((s) => s.key === key)?.value || def;
+      setRatingNames({
+        p1: get("person_name_parent1", "Parent 1"),
+        p2: get("person_name_parent2", "Parent 2"),
+        kids: "Kids",
+        kidsCount: parseInt(get("kids_count", "0"), 10),
+      });
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     setForm(toFormState(item));
@@ -119,9 +137,11 @@ export default function EditModal({ item, onSave, onClose }) {
     if (!form.title.trim()) { setTitleError(true); return; }
     const payload = {
       ...form,
-      year:      form.year      !== "" ? parseInt(form.year)      || null : null,
-      runtime:   form.runtime   !== "" ? parseInt(form.runtime)   || null : null,
-      my_rating: form.my_rating !== "" ? parseFloat(form.my_rating) || null : null,
+      year:           form.year           !== "" ? parseInt(form.year)            || null : null,
+      runtime:        form.runtime        !== "" ? parseInt(form.runtime)         || null : null,
+      parent1_rating: form.parent1_rating !== "" ? parseFloat(form.parent1_rating) || null : null,
+      parent2_rating: form.parent2_rating !== "" ? parseFloat(form.parent2_rating) || null : null,
+      kids_rating:    form.kids_rating    !== "" ? parseFloat(form.kids_rating)    || null : null,
       physical_notes: form.physical_notes || null,
       location:       form.location       || null,
       loaned_to:      form.loaned_to      || null,
@@ -332,10 +352,23 @@ export default function EditModal({ item, onSave, onClose }) {
                 <input type="checkbox" checked={form.watched} onChange={(e) => set("watched", e.target.checked)} />
                 Watched
               </label>
-              <div className="form-field" style={{ maxWidth: 160 }}>
-                <label>My Rating (0–10)</label>
-                <input type="number" min="0" max="10" step="0.1" value={form.my_rating} onChange={(e) => set("my_rating", e.target.value)} />
+            </div>
+            <div className="form-section-title" style={{ fontSize: 11, marginTop: 10, marginBottom: 6 }}>Ratings (0–10)</div>
+            <div className="form-row">
+              <div className="form-field" style={{ maxWidth: 130 }}>
+                <label>{ratingNames.p1}</label>
+                <input type="number" min="0" max="10" step="0.1" value={form.parent1_rating} onChange={(e) => set("parent1_rating", e.target.value)} />
               </div>
+              <div className="form-field" style={{ maxWidth: 130 }}>
+                <label>{ratingNames.p2}</label>
+                <input type="number" min="0" max="10" step="0.1" value={form.parent2_rating} onChange={(e) => set("parent2_rating", e.target.value)} />
+              </div>
+              {ratingNames.kidsCount > 0 && (
+                <div className="form-field" style={{ maxWidth: 130 }}>
+                  <label>Kids</label>
+                  <input type="number" min="0" max="10" step="0.1" value={form.kids_rating} onChange={(e) => set("kids_rating", e.target.value)} />
+                </div>
+              )}
             </div>
             <div className="form-row">
               <div className="form-field full">
