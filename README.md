@@ -48,12 +48,12 @@ Your CSV must use these exact headers (order doesn't matter):
 ```
 Title, Media_Type, Physical_Bluray, Physical_DVD, Physical_4K, Physical_Notes,
 Digital_Apple_TV, Digital_Plex, Digital_Movies_Anywhere, Location, Watched,
-My_Rating, Loaned_To, Notes, Year, Director, Genre, Runtime, MPAA_Rating,
-Plot, Cover_URL, IMDB_ID, TMDB_ID
+Parent1_Rating, Parent2_Rating, Kids_Rating, Loaned_To, Notes, Year, Director,
+Genre, Runtime, MPAA_Rating, Plot, Cover_URL, IMDB_ID, TMDB_ID
 ```
 
 **Boolean columns** accept: `Yes`, `yes`, `true`, `1`, `y` as truthy; blank = false.  
-**Numeric columns** (`Year`, `Runtime`, `My_Rating`) handle pandas float-formatted values (e.g. `2003.0`).
+**Numeric columns** (`Year`, `Runtime`, `Parent1_Rating`, `Parent2_Rating`, `Kids_Rating`) handle pandas float-formatted values (e.g. `2003.0`).
 
 ---
 
