@@ -88,8 +88,9 @@ export default function ListsPage({ onOpenInLibrary }) {
     setView("import");
   }
 
-  function navigateToTMDB(list) {
+  function navigateToTMDB(list = null) {
     setActiveList(list);
+    setActiveListId(list?.id ?? null);
     setView("tmdb-picker");
   }
 
@@ -165,15 +166,17 @@ export default function ListsPage({ onOpenInLibrary }) {
   }
 
   if (view === "tmdb-picker") {
+    const fromHome = activeList == null;
     return (
       <div className="lists-page">
         <ListTMDBPicker
           list={activeList}
-          onBack={() => setView("import")}
-          onImportDone={(result) => {
+          onBack={() => fromHome ? setView("home") : setView("import")}
+          onImportDone={(result, listId) => {
             const msg = `Imported ${result.imported} · Matched ${result.matched}`;
             showToast(msg, "success");
-            refreshActiveList();
+            fetchLists();
+            setActiveListId(listId);
             setView("detail");
           }}
           onShowToast={showToast}
@@ -190,6 +193,7 @@ export default function ListsPage({ onOpenInLibrary }) {
         lists={lists}
         onSelect={navigateToDetail}
         onShop={navigateToShopping}
+        onFromTMDB={() => navigateToTMDB(null)}
         onRefetch={fetchLists}
         onShowToast={showToast}
       />

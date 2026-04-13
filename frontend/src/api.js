@@ -257,7 +257,8 @@ export async function getAllUnownedItems() {
 export async function getTMDBSources() {
   const res = await fetch(`${BASE}/lists/sources/tmdb/lists`);
   if (!res.ok) throw new Error(await res.text());
-  return res.json();
+  const data = await res.json();
+  return data.lists || data;
 }
 
 export async function previewTMDBList(tmdbListId) {

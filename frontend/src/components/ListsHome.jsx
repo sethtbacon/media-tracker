@@ -3,7 +3,7 @@ import { createList, deleteList } from "../api.js";
 import ListCard from "./ListCard.jsx";
 import ListCreateModal from "./ListCreateModal.jsx";
 
-export default function ListsHome({ lists, onSelect, onShop, onRefetch, onShowToast }) {
+export default function ListsHome({ lists, onSelect, onShop, onFromTMDB, onRefetch, onShowToast }) {
   const [showCreate, setShowCreate] = useState(false);
 
   async function handleCreate(data) {
@@ -33,6 +33,9 @@ export default function ListsHome({ lists, onSelect, onShop, onRefetch, onShowTo
         <div className="lists-home-actions">
           <button className="btn btn-ghost" onClick={() => onShop(null)}>
             🛒 Shopping
+          </button>
+          <button className="btn btn-ghost" onClick={onFromTMDB}>
+            🎬 From TMDB
           </button>
           <button className="btn btn-primary" onClick={() => setShowCreate(true)}>
             + New List

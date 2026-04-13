@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
-import { getTMDBSources, previewTMDBList, importFromTMDB } from "../api.js";
+import { getTMDBSources, previewTMDBList, importFromTMDB, createList } from "../api.js";
 
+// list=null means "create a new list from scratch" (called from Lists home)
+// list=object means "import into this existing list" (called from list detail)
 export default function ListTMDBPicker({ list, onBack, onImportDone, onShowToast }) {
-  const [step, setStep] = useState("catalog"); // "catalog" | "preview"
+  const [step, setStep] = useState("catalog"); // "catalog" | "preview" | "result"
   const [sources, setSources] = useState([]);
   const [sourcesLoading, setSourcesLoading] = useState(true);
   const [sourcesError, setSourcesError] = useState(null);
@@ -13,8 +15,10 @@ export default function ListTMDBPicker({ list, onBack, onImportDone, onShowToast
   const [importMode, setImportMode] = useState("overwrite");
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState(null);
+  const [resultListId, setResultListId] = useState(null);
 
-  const hasItems = list.total > 0;
+  const isNewList = list == null;
+  const hasItems = !isNewList && list.total > 0;
 
   useEffect(() => {
     getTMDBSources()
@@ -41,13 +45,27 @@ export default function ListTMDBPicker({ list, onBack, onImportDone, onShowToast
   async function handleImport() {
     setImporting(true);
     try {
-      const data = await importFromTMDB(list.id, {
+      let targetListId = list?.id;
+
+      // Creating a new list from home — POST /lists/ first
+      if (isNewList) {
+        const newList = await createList({
+          name: selected.name,
+          list_type: "external",
+          source_name: "TMDB",
+          source_ref: `tmdb:${selected.id}`,
+        });
+        targetListId = newList.id;
+        setResultListId(newList.id);
+      }
+
+      const data = await importFromTMDB(targetListId, {
         tmdb_list_id: selected.id,
         page_limit: pageLimit,
-        mode: importMode,
+        mode: isNewList ? "overwrite" : importMode,
       });
       setResult(data);
-      onImportDone?.(data);
+      setStep("result");
     } catch (e) {
       onShowToast("Import failed: " + e.message, "error");
     } finally {
@@ -55,14 +73,16 @@ export default function ListTMDBPicker({ list, onBack, onImportDone, onShowToast
     }
   }
 
-  if (result) {
+  if (step === "result" && result) {
     return (
       <div className="list-import">
         <div className="list-import-header">
-          <button className="btn btn-ghost" onClick={onBack}>← Back</button>
           <h2 className="list-import-title">Import Complete</h2>
         </div>
         <div className="import-result">
+          <p className="tmdb-preview-total" style={{ marginBottom: 20 }}>
+            {isNewList ? `"${selected.name}" created` : `"${list.name}" updated`}
+          </p>
           <div className="import-result-stats">
             <div className="import-result-stat">
               <span className="import-result-num">{result.imported}</span>
@@ -74,11 +94,16 @@ export default function ListTMDBPicker({ list, onBack, onImportDone, onShowToast
             </div>
             <div className="import-result-stat">
               <span className="import-result-num">{result.unmatched}</span>
-              <span className="import-result-label">Not yet owned</span>
+              <span className="import-result-label">Still shopping</span>
             </div>
           </div>
           <div className="modal-footer" style={{ marginTop: 24, padding: 0 }}>
-            <button className="btn btn-primary" onClick={() => onImportDone?.(result)}>View List</button>
+            <button
+              className="btn btn-primary"
+              onClick={() => onImportDone?.(result, resultListId ?? list?.id)}
+            >
+              View List
+            </button>
           </div>
         </div>
       </div>
@@ -90,12 +115,17 @@ export default function ListTMDBPicker({ list, onBack, onImportDone, onShowToast
       <div className="list-import-header">
         <button
           className="btn btn-ghost"
-          onClick={() => { if (step === "preview") { setStep("catalog"); setPreview(null); } else onBack(); }}
+          onClick={() => {
+            if (step === "preview") { setStep("catalog"); setPreview(null); }
+            else onBack();
+          }}
         >
           ← Back
         </button>
         <h2 className="list-import-title">
-          {step === "catalog" ? "Browse TMDB Lists" : `Preview: ${selected?.name}`}
+          {step === "catalog"
+            ? (isNewList ? "New List from TMDB" : "Browse TMDB Lists")
+            : `Preview: ${selected?.name}`}
         </h2>
       </div>
 
@@ -105,7 +135,7 @@ export default function ListTMDBPicker({ list, onBack, onImportDone, onShowToast
           {sourcesError && (
             <div className="empty-state">
               <p style={{ color: "var(--danger)" }}>
-                {sourcesError.includes("TMDB API key")
+                {sourcesError.includes("TMDB API key") || sourcesError.includes("503")
                   ? "TMDB API key not configured. Add it in Settings."
                   : `Error: ${sourcesError}`}
               </p>
@@ -136,6 +166,9 @@ export default function ListTMDBPicker({ list, onBack, onImportDone, onShowToast
             <>
               <p className="tmdb-preview-total">
                 {preview.total_results} titles available
+                {isNewList && <span style={{ color: "var(--text-muted)", marginLeft: 8 }}>
+                  · will create list "{selected.name}"
+                </span>}
               </p>
 
               <div className="tmdb-preview-list">
@@ -155,11 +188,11 @@ export default function ListTMDBPicker({ list, onBack, onImportDone, onShowToast
 
               <div className="form-section" style={{ marginTop: 24 }}>
                 <div className="form-field full">
-                  <label>Pages to import</label>
+                  <label>How many to import</label>
                   <select value={pageLimit} onChange={(e) => setPageLimit(Number(e.target.value))}>
-                    <option value={1}>1 page (~20 items)</option>
-                    <option value={5}>5 pages (~100 items)</option>
-                    <option value={10}>10 pages (~200 items)</option>
+                    <option value={1}>~20 items (1 page)</option>
+                    <option value={5}>~100 items (5 pages)</option>
+                    <option value={10}>~200 items (10 pages)</option>
                   </select>
                 </div>
 
@@ -203,7 +236,11 @@ export default function ListTMDBPicker({ list, onBack, onImportDone, onShowToast
                   Back
                 </button>
                 <button className="btn btn-primary" onClick={handleImport} disabled={importing}>
-                  {importing ? "Importing…" : `Import ${pageLimit === 1 ? "~20" : pageLimit === 5 ? "~100" : "~200"} items`}
+                  {importing
+                    ? "Importing…"
+                    : isNewList
+                      ? `Create List & Import ${pageLimit === 1 ? "~20" : pageLimit === 5 ? "~100" : "~200"} Items`
+                      : `Import ${pageLimit === 1 ? "~20" : pageLimit === 5 ? "~100" : "~200"} Items`}
                 </button>
               </div>
             </>
