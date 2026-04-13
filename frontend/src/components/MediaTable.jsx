@@ -4,25 +4,25 @@ function Dot({ value }) {
   return <span className={`dot ${value ? "on" : "off"}`} />;
 }
 
-const COLUMNS = [
-  { key: "title",        label: "Title",    sortable: true },
-  { key: "year",         label: "Year",     sortable: true },
-  { key: "media_type",   label: "Type",     sortable: true },
-  { key: "physical_4k",  label: "4K",       sortable: false },
-  { key: "physical_bluray", label: "BD",    sortable: false },
-  { key: "physical_dvd", label: "DVD",      sortable: false },
-  { key: "digital_apple_tv", label: "ATV",  sortable: false },
-  { key: "digital_plex", label: "Plex",     sortable: false },
-  { key: "location",     label: "Location", sortable: true },
-  { key: "loaned_to",    label: "Loaned To",sortable: true },
-  { key: "genre",        label: "Genre",    sortable: true },
-  { key: "mpaa_rating",  label: "Rated",    sortable: true },
-  { key: "watched",      label: "W",        sortable: false },
+const FIXED_COLUMNS = [
+  { key: "title",           label: "Title",    sortable: true },
+  { key: "year",            label: "Year",     sortable: true },
+  { key: "media_type",      label: "Type",     sortable: true },
+  { key: "physical_4k",     label: "4K",       sortable: false },
+  { key: "physical_bluray", label: "BD",       sortable: false },
+  { key: "physical_dvd",    label: "DVD",      sortable: false },
+  { key: "digital_apple_tv",label: "ATV",      sortable: false },
+  { key: "digital_plex",    label: "Plex",     sortable: false },
+  { key: "location",        label: "Location", sortable: true },
+  { key: "loaned_to",       label: "Loaned To",sortable: true },
+  { key: "genre",           label: "Genre",    sortable: true },
+  { key: "mpaa_rating",     label: "Rated",    sortable: true },
 ];
 
-export default function MediaTable({ items, onEdit, onDelete, onLoadMore, hasMore, onToggleWatched }) {
+export default function MediaTable({ items, onEdit, onDelete, onLoadMore, hasMore, onToggleWatchedPerson, personNames }) {
   const [sortCol, setSortCol] = useState("title");
   const [sortDir, setSortDir] = useState("asc");
+  const pn = personNames || { p1: "P1", p2: "P2", kidsCount: 0 };
 
   function handleHeaderClick(col) {
     if (!col.sortable) return;
@@ -54,12 +54,14 @@ export default function MediaTable({ items, onEdit, onDelete, onLoadMore, hasMor
     );
   }
 
+  const totalCols = FIXED_COLUMNS.length + 1 + 1; // +1 watched, +1 actions
+
   return (
     <div className="table-container">
       <table className="media-table">
         <thead>
           <tr>
-            {COLUMNS.map((col) => (
+            {FIXED_COLUMNS.map((col) => (
               <th
                 key={col.key}
                 onClick={() => handleHeaderClick(col)}
@@ -73,13 +75,20 @@ export default function MediaTable({ items, onEdit, onDelete, onLoadMore, hasMor
                 )}
               </th>
             ))}
+            <th style={{ cursor: "default", textAlign: "center", minWidth: 72 }}>
+              <div className="watched-col-header">
+                <span>Watched</span>
+                <span className="watched-col-sub">
+                  {pn.p1.slice(0, 2)}·{pn.p2.slice(0, 2)}{pn.kidsCount > 0 ? "·K" : ""}
+                </span>
+              </div>
+            </th>
             <th style={{ cursor: "default" }}>Actions</th>
           </tr>
         </thead>
         <tbody>
           {sorted.map((item) => (
             <tr key={item.id}>
-              {/* Title + optional poster thumbnail */}
               <td className="title-cell">
                 {item.cover_url && (
                   <a href={item.cover_url} target="_blank" rel="noreferrer">
@@ -130,15 +139,26 @@ export default function MediaTable({ items, onEdit, onDelete, onLoadMore, hasMor
 
               <td>{item.mpaa_rating ?? ""}</td>
 
-              {/* Inline watched toggle */}
               <td style={{ textAlign: "center" }}>
-                <button
-                  className={`watched-toggle${item.watched ? " on" : ""}`}
-                  title={item.watched ? "Watched — click to unmark" : "Not watched — click to mark"}
-                  onClick={() => onToggleWatched(item.id, !item.watched)}
-                >
-                  {item.watched ? "✓" : "○"}
-                </button>
+                <div className="watched-dots">
+                  <button
+                    className={`watched-dot${item.watched_parent1 ? " on" : ""}`}
+                    title={`${pn.p1}: ${item.watched_parent1 ? "Watched — click to unmark" : "Not watched — click to mark"}`}
+                    onClick={() => onToggleWatchedPerson(item.id, "watched_parent1", !item.watched_parent1)}
+                  />
+                  <button
+                    className={`watched-dot${item.watched_parent2 ? " on" : ""}`}
+                    title={`${pn.p2}: ${item.watched_parent2 ? "Watched — click to unmark" : "Not watched — click to mark"}`}
+                    onClick={() => onToggleWatchedPerson(item.id, "watched_parent2", !item.watched_parent2)}
+                  />
+                  {pn.kidsCount > 0 && (
+                    <button
+                      className={`watched-dot${item.watched_kids ? " on" : ""}`}
+                      title={`Kids: ${item.watched_kids ? "Watched — click to unmark" : "Not watched — click to mark"}`}
+                      onClick={() => onToggleWatchedPerson(item.id, "watched_kids", !item.watched_kids)}
+                    />
+                  )}
+                </div>
               </td>
 
               <td>
@@ -163,7 +183,7 @@ export default function MediaTable({ items, onEdit, onDelete, onLoadMore, hasMor
           ))}
           {hasMore && (
             <tr className="load-more-row">
-              <td colSpan={COLUMNS.length + 1}>
+              <td colSpan={totalCols}>
                 <button className="btn btn-ghost" onClick={onLoadMore}>
                   Load more…
                 </button>

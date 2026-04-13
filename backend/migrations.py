@@ -31,3 +31,28 @@ def run_migrations():
             conn.execute(text("ALTER TABLE movie_night_sessions ADD COLUMN max_mpaa_rating TEXT"))
         if "media_type_filter" not in mn_cols:
             conn.execute(text("ALTER TABLE movie_night_sessions ADD COLUMN media_type_filter TEXT"))
+
+        # Per-person watched columns + global not_interested on media_items
+        if "watched_parent1" not in cols:
+            conn.execute(text("ALTER TABLE media_items ADD COLUMN watched_parent1 BOOLEAN NOT NULL DEFAULT 0"))
+            # Migrate existing watched=1 to watched_parent1=1 (attribute to parent1)
+            conn.execute(text("UPDATE media_items SET watched_parent1 = 1 WHERE watched = 1"))
+        if "watched_parent2" not in cols:
+            conn.execute(text("ALTER TABLE media_items ADD COLUMN watched_parent2 BOOLEAN NOT NULL DEFAULT 0"))
+        if "watched_kids" not in cols:
+            conn.execute(text("ALTER TABLE media_items ADD COLUMN watched_kids BOOLEAN NOT NULL DEFAULT 0"))
+        if "not_interested" not in cols:
+            conn.execute(text("ALTER TABLE media_items ADD COLUMN not_interested BOOLEAN NOT NULL DEFAULT 0"))
+
+        # list_items: poster + per-person watched + not_interested
+        li_cols = {c["name"] for c in inspect(engine).get_columns("list_items")}
+        if "poster_url" not in li_cols:
+            conn.execute(text("ALTER TABLE list_items ADD COLUMN poster_url TEXT"))
+        if "watched_parent1" not in li_cols:
+            conn.execute(text("ALTER TABLE list_items ADD COLUMN watched_parent1 BOOLEAN NOT NULL DEFAULT 0"))
+        if "watched_parent2" not in li_cols:
+            conn.execute(text("ALTER TABLE list_items ADD COLUMN watched_parent2 BOOLEAN NOT NULL DEFAULT 0"))
+        if "watched_kids" not in li_cols:
+            conn.execute(text("ALTER TABLE list_items ADD COLUMN watched_kids BOOLEAN NOT NULL DEFAULT 0"))
+        if "not_interested" not in li_cols:
+            conn.execute(text("ALTER TABLE list_items ADD COLUMN not_interested BOOLEAN NOT NULL DEFAULT 0"))

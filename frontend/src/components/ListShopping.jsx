@@ -28,7 +28,7 @@ export default function ListShopping({ list, onBack, onAdded, onShowToast }) {
     try {
       if (list) {
         const data = await getList(list.id);
-        setItems((data.items || []).filter((i) => !i.owned));
+        setItems((data.items || []).filter((i) => !i.owned && !i.not_interested));
       } else {
         const data = await getAllUnownedItems();
         setItems(data.items || []);

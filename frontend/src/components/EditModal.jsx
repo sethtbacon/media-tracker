@@ -21,7 +21,10 @@ const EMPTY = {
   digital_plex: false,
   location: "",
   loaned_to: "",
-  watched: false,
+  watched_parent1: false,
+  watched_parent2: false,
+  watched_kids: false,
+  not_interested: false,
   parent1_rating: "",
   parent2_rating: "",
   kids_rating: "",
@@ -48,6 +51,10 @@ function toFormState(item) {
     tmdb_id: item.tmdb_id ?? "",
     plot: item.plot ?? "",
     cover_url: item.cover_url ?? "",
+    watched_parent1: item.watched_parent1 ?? false,
+    watched_parent2: item.watched_parent2 ?? false,
+    watched_kids: item.watched_kids ?? false,
+    not_interested: item.not_interested ?? false,
   };
 }
 
@@ -141,6 +148,7 @@ export default function EditModal({ item, onSave, onClose }) {
       parent1_rating: form.parent1_rating !== "" ? parseFloat(form.parent1_rating) || null : null,
       parent2_rating: form.parent2_rating !== "" ? parseFloat(form.parent2_rating) || null : null,
       kids_rating:    form.kids_rating    !== "" ? parseFloat(form.kids_rating)    || null : null,
+      watched:        !!(form.watched_parent1 || form.watched_parent2 || form.watched_kids),
       physical_notes: form.physical_notes || null,
       location:       form.location       || null,
       loaned_to:      form.loaned_to      || null,
@@ -345,10 +353,27 @@ export default function EditModal({ item, onSave, onClose }) {
           {/* Personal */}
           <div className="form-section">
             <div className="form-section-title">Personal</div>
-            <div className="form-row" style={{ alignItems: "center" }}>
+            <div className="form-section-title" style={{ fontSize: 11, marginBottom: 6 }}>Watched</div>
+            <div className="checkbox-group">
               <label className="checkbox-item">
-                <input type="checkbox" checked={form.watched} onChange={(e) => set("watched", e.target.checked)} />
-                Watched
+                <input type="checkbox" checked={form.watched_parent1} onChange={(e) => set("watched_parent1", e.target.checked)} />
+                {ratingNames.p1}
+              </label>
+              <label className="checkbox-item">
+                <input type="checkbox" checked={form.watched_parent2} onChange={(e) => set("watched_parent2", e.target.checked)} />
+                {ratingNames.p2}
+              </label>
+              {ratingNames.kidsCount > 0 && (
+                <label className="checkbox-item">
+                  <input type="checkbox" checked={form.watched_kids} onChange={(e) => set("watched_kids", e.target.checked)} />
+                  Kids
+                </label>
+              )}
+            </div>
+            <div className="form-row" style={{ alignItems: "center", marginTop: 6 }}>
+              <label className="checkbox-item">
+                <input type="checkbox" checked={form.not_interested} onChange={(e) => set("not_interested", e.target.checked)} />
+                Not Interested
               </label>
             </div>
             <div className="form-section-title" style={{ fontSize: 11, marginTop: 10, marginBottom: 6 }}>Ratings (0–10)</div>

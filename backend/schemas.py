@@ -15,6 +15,10 @@ class MediaItemBase(BaseModel):
     location: Optional[str] = None
     loaned_to: Optional[str] = None
     watched: Optional[bool] = False
+    watched_parent1: Optional[bool] = False
+    watched_parent2: Optional[bool] = False
+    watched_kids: Optional[bool] = False
+    not_interested: Optional[bool] = False
     parent1_rating: Optional[float] = None
     parent2_rating: Optional[float] = None
     kids_rating: Optional[float] = None
@@ -46,6 +50,10 @@ class MediaItemUpdate(BaseModel):
     location: Optional[str] = None
     loaned_to: Optional[str] = None
     watched: Optional[bool] = None
+    watched_parent1: Optional[bool] = None
+    watched_parent2: Optional[bool] = None
+    watched_kids: Optional[bool] = None
+    not_interested: Optional[bool] = None
     parent1_rating: Optional[float] = None
     parent2_rating: Optional[float] = None
     kids_rating: Optional[float] = None
@@ -222,6 +230,10 @@ class ListItemUpdate(BaseModel):
     imdb_id: Optional[str] = None
     tmdb_id: Optional[str] = None
     notes: Optional[str] = None
+    watched_parent1: Optional[bool] = None
+    watched_parent2: Optional[bool] = None
+    watched_kids: Optional[bool] = None
+    not_interested: Optional[bool] = None
 
 
 class ListItemOut(ListItemBase):
@@ -230,6 +242,11 @@ class ListItemOut(ListItemBase):
     media_id: Optional[int] = None
     owned: bool = False
     watched: bool = False
+    watched_parent1: bool = False
+    watched_parent2: bool = False
+    watched_kids: bool = False
+    not_interested: bool = False
+    poster_url: Optional[str] = None
     media_cover_url: Optional[str] = None
     media_runtime: Optional[int] = None
     media_mpaa_rating: Optional[str] = None

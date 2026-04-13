@@ -2358,3 +2358,90 @@ input:focus, select:focus, textarea:focus {
 }
 .format-toggle.error { border-color: var(--danger); }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* ── Per-person watched dots ───────────────────────────────────────────────── */
+
+.watched-dots {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  align-items: center;
+}
+
+.watched-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+}
+
+.watched-dot.on {
+  background: var(--success);
+  border-color: var(--success);
+}
+
+.watched-dot:hover:not(.on) {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.watched-dot.on:hover {
+  opacity: 0.65;
+}
+
+.watched-col-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.watched-col-sub {
+  font-size: 9px;
+  color: var(--text-muted);
+  font-weight: 400;
+  letter-spacing: 0.5px;
+}
+
+/* ── Not interested / skipped ──────────────────────────────────────────────── */
+
+.not-interested-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  font-size: 11px;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.not-interested-btn:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.not-interested-btn.active {
+  border-color: var(--warning);
+  color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 10%, transparent);
+}
+
+.list-item-skipped {
+  opacity: 0.4;
+}
+
+.list-item-skipped .not-interested-btn {
+  opacity: 1;
+}

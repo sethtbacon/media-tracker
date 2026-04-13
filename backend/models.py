@@ -27,6 +27,10 @@ class MediaItem(Base):
 
     # Personal tracking
     watched = Column(Boolean, default=False)
+    watched_parent1 = Column(Boolean, default=False)
+    watched_parent2 = Column(Boolean, default=False)
+    watched_kids = Column(Boolean, default=False)
+    not_interested = Column(Boolean, default=False)
     # my_rating kept as dead column (data migrated to parent1_rating at startup)
     parent1_rating = Column(Float, nullable=True)
     parent2_rating = Column(Float, nullable=True)
@@ -117,5 +121,10 @@ class ListItem(Base):
     imdb_id = Column(String, nullable=True)
     tmdb_id = Column(String, nullable=True)
     media_id = Column(Integer, nullable=True)          # soft FK to media_items.id when matched
+    poster_url = Column(String, nullable=True)
+    watched_parent1 = Column(Boolean, default=False)
+    watched_parent2 = Column(Boolean, default=False)
+    watched_kids = Column(Boolean, default=False)
+    not_interested = Column(Boolean, default=False)
     notes = Column(Text, nullable=True)
     added_at = Column(DateTime, default=func.now())

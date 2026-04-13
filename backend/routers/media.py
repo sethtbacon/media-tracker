@@ -10,7 +10,7 @@ from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import MediaItem, SystemSetting
+from models import ListItem, MediaItem, SystemSetting
 from schemas import MediaItemCreate, MediaItemOut, MediaItemUpdate, MediaListResponse, StatsResponse
 
 router = APIRouter()
@@ -207,8 +207,23 @@ def update_media(item_id: int, data: MediaItemUpdate, db: Session = Depends(get_
     item = db.query(MediaItem).filter(MediaItem.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
-    for field, value in data.model_dump(exclude_unset=True).items():
+
+    updates = data.model_dump(exclude_unset=True)
+    watched_person_fields = {"watched_parent1", "watched_parent2", "watched_kids"}
+
+    for field, value in updates.items():
         setattr(item, field, value)
+
+    # Recompute aggregate watched whenever per-person fields change
+    if watched_person_fields & updates.keys():
+        item.watched = bool(item.watched_parent1 or item.watched_parent2 or item.watched_kids)
+
+    # Propagate not_interested to all list_items linked to this media_item
+    if "not_interested" in updates:
+        db.query(ListItem).filter(ListItem.media_id == item_id).update(
+            {"not_interested": updates["not_interested"]}, synchronize_session=False
+        )
+
     db.commit()
     db.refresh(item)
     return item

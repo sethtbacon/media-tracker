@@ -92,19 +92,32 @@ def _rematch_list(db: Session, list_id: int) -> None:
 
 def _get_raw_stats(db: Session, list_id: int) -> dict:
     """Compute stats without side effects."""
+    from sqlalchemy import or_ as sqla_or
     total = db.query(ListItem).filter(ListItem.list_id == list_id).count()
     owned_items = db.query(ListItem).filter(
         ListItem.list_id == list_id,
         ListItem.media_id.isnot(None),
     ).all()
     owned = len(owned_items)
+
+    # Watched: owned items (from media_items) + unowned items watched on the list itself
     watched = 0
     if owned_items:
         media_ids = [i.media_id for i in owned_items]
-        watched = db.query(MediaItem).filter(
+        watched += db.query(MediaItem).filter(
             MediaItem.id.in_(media_ids),
             MediaItem.watched == True,  # noqa: E712
         ).count()
+    watched += db.query(ListItem).filter(
+        ListItem.list_id == list_id,
+        ListItem.media_id.is_(None),
+        sqla_or(
+            ListItem.watched_parent1 == True,  # noqa: E712
+            ListItem.watched_parent2 == True,  # noqa: E712
+            ListItem.watched_kids == True,  # noqa: E712
+        ),
+    ).count()
+
     return {"total": total, "owned": owned, "watched": watched, "unowned": total - owned}
 
 
@@ -159,6 +172,21 @@ def _get_item_media(db: Session, item: ListItem) -> Optional[MediaItem]:
 
 
 def _build_item_out(item: ListItem, media: Optional[MediaItem], list_name: Optional[str] = None) -> dict:
+    # For watched fields: owned items use media_items; unowned use list_items
+    if media:
+        w_p1   = bool(media.watched_parent1)
+        w_p2   = bool(media.watched_parent2)
+        w_kids = bool(media.watched_kids)
+        ni     = bool(media.not_interested)
+    else:
+        w_p1   = bool(item.watched_parent1)
+        w_p2   = bool(item.watched_parent2)
+        w_kids = bool(item.watched_kids)
+        ni     = bool(item.not_interested)
+
+    # Effective poster: library cover > TMDB poster stored on list item
+    cover = (media.cover_url if media else None) or item.poster_url
+
     return {
         "id": item.id,
         "list_id": item.list_id,
@@ -170,14 +198,44 @@ def _build_item_out(item: ListItem, media: Optional[MediaItem], list_name: Optio
         "notes": item.notes,
         "media_id": item.media_id,
         "owned": media is not None,
-        "watched": bool(media and media.watched),
-        "media_cover_url": media.cover_url if media else None,
+        "watched": w_p1 or w_p2 or w_kids,
+        "watched_parent1": w_p1,
+        "watched_parent2": w_p2,
+        "watched_kids": w_kids,
+        "not_interested": ni,
+        "media_cover_url": cover,
+        "poster_url": item.poster_url,
         "media_runtime": media.runtime if media else None,
         "media_mpaa_rating": media.mpaa_rating if media else None,
         "media_title": media.title if media else None,
         "list_name": list_name,
         "added_at": _fmt_dt(item.added_at),
     }
+
+
+def _propagate_not_interested(db: Session, value: bool, source_item: ListItem) -> None:
+    """Globally set not_interested for this title across all list_items and media_items."""
+    from sqlalchemy import or_ as sqla_or
+    if source_item.media_id:
+        media = db.query(MediaItem).filter(MediaItem.id == source_item.media_id).first()
+        if media:
+            media.not_interested = value
+        db.query(ListItem).filter(ListItem.media_id == source_item.media_id).update(
+            {"not_interested": value}, synchronize_session=False
+        )
+    else:
+        source_item.not_interested = value
+        clauses = []
+        if source_item.imdb_id:
+            clauses.append(ListItem.imdb_id == source_item.imdb_id)
+        if source_item.tmdb_id:
+            clauses.append(ListItem.tmdb_id == source_item.tmdb_id)
+        if clauses:
+            db.query(ListItem).filter(
+                sqla_or(*clauses),
+                ListItem.id != source_item.id,
+            ).update({"not_interested": value}, synchronize_session=False)
+    db.flush()
 
 
 def _delete_list_cascade(db: Session, list_id: int) -> None:
@@ -223,12 +281,15 @@ def _tmdb_result_to_item(result: dict, rank: int, list_id: int) -> ListItem:
     title = result.get("title") or result.get("name") or ""
     raw_date = result.get("release_date") or result.get("first_air_date") or ""
     year = int(raw_date[:4]) if raw_date and len(raw_date) >= 4 else None
+    poster_path = result.get("poster_path")
+    poster_url = f"https://image.tmdb.org/t/p/w185{poster_path}" if poster_path else None
     return ListItem(
         list_id=list_id,
         rank=rank,
         title=title,
         year=year,
         tmdb_id=str(result["id"]),
+        poster_url=poster_url,
     )
 
 
@@ -288,7 +349,11 @@ def get_all_unowned_items(db: Session = Depends(get_db)):
     for ml in lists_rows:
         items = (
             db.query(ListItem)
-            .filter(ListItem.list_id == ml.id, ListItem.media_id.is_(None))
+            .filter(
+                ListItem.list_id == ml.id,
+                ListItem.media_id.is_(None),
+                ListItem.not_interested.isnot(True),
+            )
             .order_by(ListItem.rank.asc().nullslast(), ListItem.id.asc())
             .all()
         )
@@ -390,9 +455,36 @@ def update_list_item(
     item = db.query(ListItem).filter(ListItem.id == item_id, ListItem.list_id == list_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
-    for key, value in data.model_dump(exclude_unset=True).items():
-        setattr(item, key, value)
-    item.media_id = _match_item(db, item)
+
+    updates = data.model_dump(exclude_unset=True)
+    watched_person_fields = {"watched_parent1", "watched_parent2", "watched_kids"}
+    watched_updates = {k: v for k, v in updates.items() if k in watched_person_fields}
+    meta_updates = {k: v for k, v in updates.items()
+                    if k not in watched_person_fields and k != "not_interested"}
+
+    # Watched fields: route to media_items if owned, else update list_item directly
+    if watched_updates:
+        if item.media_id:
+            media = db.query(MediaItem).filter(MediaItem.id == item.media_id).first()
+            if media:
+                for k, v in watched_updates.items():
+                    setattr(media, k, v)
+                media.watched = bool(media.watched_parent1 or media.watched_parent2 or media.watched_kids)
+        else:
+            for k, v in watched_updates.items():
+                setattr(item, k, v)
+
+    # Metadata fields
+    for k, v in meta_updates.items():
+        setattr(item, k, v)
+
+    # not_interested: global propagation
+    if "not_interested" in updates:
+        _propagate_not_interested(db, updates["not_interested"], item)
+
+    if meta_updates:
+        item.media_id = _match_item(db, item)
+
     _update_badge_timestamps(db, list_id)
     db.commit()
     db.refresh(item)

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { getMedia, getStats, createMedia, updateMedia, deleteMedia, getMediaById } from "./api.js";
+import { getMedia, getStats, createMedia, updateMedia, deleteMedia, getMediaById, getSettings } from "./api.js";
 import StatsBar from "./components/StatsBar.jsx";
 import FilterBar, { FILTER_DEFAULTS } from "./components/FilterBar.jsx";
 import MediaTable from "./components/MediaTable.jsx";
@@ -19,6 +19,7 @@ export default function App() {
   const [filters, setFilters] = useState({ ...FILTER_DEFAULTS });
   const [skip, setSkip] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [personNames, setPersonNames] = useState({ p1: "Parent 1", p2: "Parent 2", kidsCount: 0 });
 
   // Modal state: null = new item, object = edit item, modalOpen controls visibility
   const [modalItem, setModalItem] = useState(null);
@@ -54,6 +55,14 @@ export default function App() {
   useEffect(() => {
     fetchStats();
     fetchMedia(filters, 0);
+    getSettings().then((settings) => {
+      const get = (key, def) => settings.find((s) => s.key === key)?.value ?? def;
+      setPersonNames({
+        p1: get("person_name_parent1", "Parent 1"),
+        p2: get("person_name_parent2", "Parent 2"),
+        kidsCount: parseInt(get("kids_count", "0"), 10),
+      });
+    }).catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -98,14 +107,22 @@ export default function App() {
     }
   }
 
-  async function handleToggleWatched(id, watched) {
-    // Optimistic update
-    setItems((prev) => prev.map((i) => i.id === id ? { ...i, watched } : i));
+  async function handleToggleWatchedPerson(id, field, value) {
+    setItems((prev) => prev.map((i) => {
+      if (i.id !== id) return i;
+      const updated = { ...i, [field]: value };
+      updated.watched = !!(updated.watched_parent1 || updated.watched_parent2 || updated.watched_kids);
+      return updated;
+    }));
     try {
-      await updateMedia(id, { watched });
+      await updateMedia(id, { [field]: value });
     } catch (e) {
-      // Revert on error
-      setItems((prev) => prev.map((i) => i.id === id ? { ...i, watched: !watched } : i));
+      setItems((prev) => prev.map((i) => {
+        if (i.id !== id) return i;
+        const reverted = { ...i, [field]: !value };
+        reverted.watched = !!(reverted.watched_parent1 || reverted.watched_parent2 || reverted.watched_kids);
+        return reverted;
+      }));
       console.error("Failed to toggle watched", e);
     }
   }
@@ -187,7 +204,8 @@ export default function App() {
               onDelete={handleDelete}
               onLoadMore={handleLoadMore}
               hasMore={hasMore}
-              onToggleWatched={handleToggleWatched}
+              onToggleWatchedPerson={handleToggleWatchedPerson}
+              personNames={personNames}
             />
           ) : (
             <PosterGrid
