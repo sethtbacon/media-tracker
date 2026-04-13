@@ -204,10 +204,13 @@ export default function SettingsPage() {
 
       {/* ── TMDB API Key ── */}
       <section className="settings-section">
-        <h2 className="settings-section-title">TMDB API Key</h2>
+        <h2 className="settings-section-title">Lists — TMDB API Key</h2>
         <p className="settings-description">
-          Used for importing lists from TMDB (Top Rated, Popular, Now Playing). Get a free key at{" "}
-          <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noreferrer" className="settings-link">themoviedb.org</a>.
+          The TMDB API key enables importing curated lists (Top Rated, Popular, Now Playing) directly
+          from The Movie Database into your Lists tab. Create a free account and request a v3 API key at{" "}
+          <a href="https://www.themoviedb.org/signup" target="_blank" rel="noreferrer" className="settings-link">themoviedb.org</a>
+          {" "}— once registered, find your key under{" "}
+          <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noreferrer" className="settings-link">Settings → API</a>.
         </p>
         <form className="settings-form" onSubmit={handleSaveTmdbKey}>
           <div className="settings-field">
