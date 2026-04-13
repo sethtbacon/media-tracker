@@ -68,15 +68,15 @@ export default function ListDetail({
     }).catch(() => {});
   }, []);
 
-  async function loadList() {
-    setLoading(true);
+  async function loadList(silent = false) {
+    if (!silent) setLoading(true);
     try {
       const data = await getList(listId);
       setList(data);
     } catch (e) {
       onShowToast("Failed to load list: " + e.message, "error");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }
 
@@ -104,7 +104,7 @@ export default function ListDetail({
         // Unowned — update list_items
         await updateListItem(listId, item.id, { [field]: value });
       }
-      await loadList();
+      await loadList(true); // silent — don't reset scroll
       onRefresh?.();
     } catch (e) {
       onShowToast("Update failed: " + e.message, "error");
@@ -115,7 +115,7 @@ export default function ListDetail({
     const newVal = !item.not_interested;
     try {
       await updateListItem(listId, item.id, { not_interested: newVal });
-      await loadList();
+      await loadList(true); // silent — don't reset scroll
       onRefresh?.();
       if (newVal) onShowToast(`Skipped "${item.title}" — won't show in shopping`, "info");
     } catch (e) {

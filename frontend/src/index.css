@@ -2011,6 +2011,12 @@ input:focus, select:focus, textarea:focus {
   color: #fff;
 }
 
+/* Remove extra horizontal padding — .lists-page already provides 24px gutter */
+.list-detail .table-container {
+  padding-left: 0;
+  padding-right: 0;
+}
+
 /* Item table enhancements */
 .list-item-table .title-cell {
   display: flex;
