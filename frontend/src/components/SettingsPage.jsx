@@ -207,10 +207,11 @@ export default function SettingsPage() {
         <h2 className="settings-section-title">Lists — TMDB API Key</h2>
         <p className="settings-description">
           The TMDB API key enables importing curated lists (Top Rated, Popular, Now Playing) directly
-          from The Movie Database into your Lists tab. Create a free account and request a v3 API key at{" "}
+          from The Movie Database into your Lists tab. Create a free account at{" "}
           <a href="https://www.themoviedb.org/signup" target="_blank" rel="noreferrer" className="settings-link">themoviedb.org</a>
-          {" "}— once registered, find your key under{" "}
+          {" "}then find your key under{" "}
           <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noreferrer" className="settings-link">Settings → API</a>.
+          {" "}Use the <strong>API Key (v3 auth)</strong> — not the Read Access Token.
         </p>
         <form className="settings-form" onSubmit={handleSaveTmdbKey}>
           <div className="settings-field">
