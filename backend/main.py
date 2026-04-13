@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from database import engine
 import models
 import migrations
-from routers import media, import_export, settings, movie_night
+from routers import media, import_export, settings, movie_night, lists
 
 migrations.run_migrations()
 models.Base.metadata.create_all(bind=engine)
@@ -23,3 +23,4 @@ app.include_router(media.router, prefix="/api")
 app.include_router(import_export.router, prefix="/api")
 app.include_router(settings.router, prefix="/api")
 app.include_router(movie_night.router, prefix="/api")
+app.include_router(lists.router, prefix="/api")

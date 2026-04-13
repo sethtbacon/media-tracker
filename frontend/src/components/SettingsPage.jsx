@@ -7,6 +7,11 @@ export default function SettingsPage() {
   const [keyStatus, setKeyStatus] = useState(null);
   const [keySaving, setKeySaving] = useState(false);
 
+  const [tmdbKey, setTmdbKey] = useState("");
+  const [showTmdbKey, setShowTmdbKey] = useState(false);
+  const [tmdbKeyStatus, setTmdbKeyStatus] = useState(null);
+  const [tmdbKeySaving, setTmdbKeySaving] = useState(false);
+
   const [missingCount, setMissingCount] = useState(null);
   const [fetchRunning, setFetchRunning] = useState(false);
   const [fetchTotals, setFetchTotals] = useState({ updated: 0, not_found: 0, failed: 0 });
@@ -33,6 +38,7 @@ export default function SettingsPage() {
       .then((settings) => {
         const get = (key, def) => settings.find((s) => s.key === key)?.value ?? def;
         if (get("omdb_api_key", "")) setOmdbKey(get("omdb_api_key", ""));
+        if (get("tmdb_api_key", "")) setTmdbKey(get("tmdb_api_key", ""));
         setP1Name(get("person_name_parent1", "Parent 1"));
         setP2Name(get("person_name_parent2", "Parent 2"));
         setKidsCount(parseInt(get("kids_count", "0"), 10));
@@ -66,6 +72,20 @@ export default function SettingsPage() {
       setKeyStatus({ type: "error", msg: "Save failed: " + err.message });
     } finally {
       setKeySaving(false);
+    }
+  }
+
+  async function handleSaveTmdbKey(e) {
+    e.preventDefault();
+    setTmdbKeySaving(true);
+    setTmdbKeyStatus(null);
+    try {
+      await updateSetting("tmdb_api_key", tmdbKey.trim() || null);
+      setTmdbKeyStatus({ type: "success", msg: "Saved." });
+    } catch (err) {
+      setTmdbKeyStatus({ type: "error", msg: "Save failed: " + err.message });
+    } finally {
+      setTmdbKeySaving(false);
     }
   }
 
@@ -176,6 +196,43 @@ export default function SettingsPage() {
             {keyStatus && (
               <p className={keyStatus.type === "success" ? "settings-success" : "settings-error"}>
                 {keyStatus.msg}
+              </p>
+            )}
+          </div>
+        </form>
+      </section>
+
+      {/* ── TMDB API Key ── */}
+      <section className="settings-section">
+        <h2 className="settings-section-title">TMDB API Key</h2>
+        <p className="settings-description">
+          Used for importing lists from TMDB (Top Rated, Popular, Now Playing). Get a free key at{" "}
+          <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noreferrer" className="settings-link">themoviedb.org</a>.
+        </p>
+        <form className="settings-form" onSubmit={handleSaveTmdbKey}>
+          <div className="settings-field">
+            <label htmlFor="tmdb-key">TMDB API Key</label>
+            <div className="settings-input-row">
+              <input
+                id="tmdb-key"
+                type={showTmdbKey ? "text" : "password"}
+                value={tmdbKey}
+                onChange={(e) => setTmdbKey(e.target.value)}
+                placeholder="Enter your TMDB API key"
+                className="settings-input"
+                autoComplete="off"
+                spellCheck={false}
+              />
+              <button type="button" className="btn btn-ghost" onClick={() => setShowTmdbKey((v) => !v)}>
+                {showTmdbKey ? "Hide" : "Show"}
+              </button>
+              <button type="submit" className="btn btn-primary" disabled={tmdbKeySaving}>
+                {tmdbKeySaving ? "Saving…" : "Save"}
+              </button>
+            </div>
+            {tmdbKeyStatus && (
+              <p className={tmdbKeyStatus.type === "success" ? "settings-success" : "settings-error"}>
+                {tmdbKeyStatus.msg}
               </p>
             )}
           </div>

@@ -8,6 +8,7 @@ import ImportPanel from "./components/ImportPanel.jsx";
 import SettingsPage from "./components/SettingsPage.jsx";
 import PosterGrid from "./components/PosterGrid.jsx";
 import MovieNightPage from "./components/MovieNightPage.jsx";
+import ListsPage from "./components/ListsPage.jsx";
 
 const PAGE_SIZE = 200;
 
@@ -26,7 +27,7 @@ export default function App() {
 
   // Check URL for ?session= param to auto-navigate to Movie Night
   const urlSession = new URLSearchParams(window.location.search).get("session");
-  const [view, setView] = useState(urlSession ? "movie-night" : "library"); // "library" | "settings" | "movie-night"
+  const [view, setView] = useState(urlSession ? "movie-night" : "library"); // "library" | "settings" | "movie-night" | "lists"
 
   const fetchStats = useCallback(async () => {
     try { setStats(await getStats()); } catch (e) { console.error(e); }
@@ -151,6 +152,12 @@ export default function App() {
           >
             Movie Night
           </button>
+          <button
+            className={`nav-btn${view === "lists" ? " active" : ""}`}
+            onClick={() => setView("lists")}
+          >
+            Lists
+          </button>
         </nav>
         <div className="header-actions">
           {view === "library" && (
@@ -196,6 +203,8 @@ export default function App() {
       {view === "settings" && <SettingsPage />}
 
       {view === "movie-night" && <MovieNightPage initialSessionCode={urlSession} onOpenInLibrary={handleOpenInLibrary} />}
+
+      {view === "lists" && <ListsPage onOpenInLibrary={handleOpenInLibrary} />}
 
       {modalOpen && (
         <EditModal

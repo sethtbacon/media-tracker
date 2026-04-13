@@ -85,3 +85,37 @@ class SessionSwipe(Base):
     participant_key = Column(String, nullable=False)  # "parent1","parent2","kid_1"…
     swiped_right = Column(Boolean, nullable=False)
     swiped_at = Column(DateTime, default=func.now())
+
+
+class MediaList(Base):
+    __tablename__ = "lists"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    list_type = Column(String, default="custom")       # "custom" | "external"
+    source_name = Column(String, nullable=True)        # "TMDB" | "AFI" | "Friends" | free-form
+    source_url = Column(String, nullable=True)
+    source_ref = Column(String, nullable=True)         # e.g. "tmdb:movie/top_rated" for refresh
+    version_note = Column(String, nullable=True)       # "pulled 2026-04-12" on archived copies
+    parent_list_id = Column(Integer, nullable=True)    # soft FK to lists.id for archived copies
+    is_archived = Column(Boolean, default=False)
+    owned_completed_at = Column(DateTime, nullable=True)
+    watched_completed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+
+class ListItem(Base):
+    __tablename__ = "list_items"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    list_id = Column(Integer, nullable=False, index=True)
+    rank = Column(Integer, nullable=True)
+    title = Column(String, nullable=False)
+    year = Column(Integer, nullable=True)
+    imdb_id = Column(String, nullable=True)
+    tmdb_id = Column(String, nullable=True)
+    media_id = Column(Integer, nullable=True)          # soft FK to media_items.id when matched
+    notes = Column(Text, nullable=True)
+    added_at = Column(DateTime, default=func.now())

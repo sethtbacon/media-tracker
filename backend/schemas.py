@@ -158,3 +158,127 @@ class SessionHistoryItem(BaseModel):
     match_count: int
     carry_over_count: int
     created_at: str
+
+
+# ── Lists ─────────────────────────────────────────────────────────────────────
+
+class ListBase(BaseModel):
+    name: str
+    description: Optional[str] = None
+    list_type: str = "custom"         # "custom" | "external"
+    source_name: Optional[str] = None
+    source_url: Optional[str] = None
+    source_ref: Optional[str] = None  # e.g. "tmdb:movie/top_rated"
+
+
+class ListCreate(ListBase):
+    pass
+
+
+class ListUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    list_type: Optional[str] = None
+    source_name: Optional[str] = None
+    source_url: Optional[str] = None
+    source_ref: Optional[str] = None
+
+
+class ListOut(ListBase):
+    id: int
+    version_note: Optional[str] = None
+    parent_list_id: Optional[int] = None
+    is_archived: bool = False
+    owned_completed_at: Optional[str] = None
+    watched_completed_at: Optional[str] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+    # computed stats
+    total: int = 0
+    owned: int = 0
+    watched: int = 0
+    unowned: int = 0
+
+    model_config = {"from_attributes": True}
+
+
+class ListItemBase(BaseModel):
+    title: str
+    rank: Optional[int] = None
+    year: Optional[int] = None
+    imdb_id: Optional[str] = None
+    tmdb_id: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class ListItemCreate(ListItemBase):
+    pass
+
+
+class ListItemUpdate(BaseModel):
+    title: Optional[str] = None
+    rank: Optional[int] = None
+    year: Optional[int] = None
+    imdb_id: Optional[str] = None
+    tmdb_id: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class ListItemOut(ListItemBase):
+    id: int
+    list_id: int
+    media_id: Optional[int] = None
+    owned: bool = False
+    watched: bool = False
+    media_cover_url: Optional[str] = None
+    media_runtime: Optional[int] = None
+    media_mpaa_rating: Optional[str] = None
+    media_title: Optional[str] = None
+    list_name: Optional[str] = None   # populated in aggregate views
+    added_at: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+class ListDetailOut(ListOut):
+    items: List[ListItemOut] = []
+
+
+class ListsResponse(BaseModel):
+    items: List[ListOut]
+    total: int
+
+
+class ImportListResponse(BaseModel):
+    imported: int
+    matched: int
+    unmatched: int
+    errors: List[str]
+
+
+class TMDBListOption(BaseModel):
+    id: str
+    name: str
+    media_type: str
+
+
+class TMDBPreviewItem(BaseModel):
+    title: str
+    year: Optional[int] = None
+    tmdb_id: str
+
+
+class TMDBPreviewResponse(BaseModel):
+    items: List[TMDBPreviewItem]
+    total_results: int
+
+
+class TMDBImportRequest(BaseModel):
+    tmdb_list_id: str
+    page_limit: int = 5
+    mode: str = "overwrite"   # "overwrite" | "archive"
+
+
+class UnownedItemsResponse(BaseModel):
+    items: List[ListItemOut]
+    total: int

@@ -163,3 +163,117 @@ export async function deleteMovieNightSession(code) {
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
+
+// ── Lists ─────────────────────────────────────────────────────────────────────
+
+export async function getLists(archived = false) {
+  const qs = archived ? "?archived=true" : "";
+  const res = await fetch(`${BASE}/lists/${qs}`);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function getList(id) {
+  const res = await fetch(`${BASE}/lists/${id}`);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function createList(data) {
+  const res = await fetch(`${BASE}/lists/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function updateList(id, data) {
+  const res = await fetch(`${BASE}/lists/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function deleteList(id) {
+  const res = await fetch(`${BASE}/lists/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new Error(await res.text());
+}
+
+export async function rematchList(id) {
+  const res = await fetch(`${BASE}/lists/${id}/rematch`, { method: "POST" });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function addListItem(listId, item) {
+  const res = await fetch(`${BASE}/lists/${listId}/items`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(item),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function updateListItem(listId, itemId, item) {
+  const res = await fetch(`${BASE}/lists/${listId}/items/${itemId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(item),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function deleteListItem(listId, itemId) {
+  const res = await fetch(`${BASE}/lists/${listId}/items/${itemId}`, { method: "DELETE" });
+  if (!res.ok) throw new Error(await res.text());
+}
+
+export async function importListCSV(listId, file, mode = "overwrite") {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch(
+    `${BASE}/lists/${listId}/import/csv?mode=${encodeURIComponent(mode)}`,
+    { method: "POST", body: form }
+  );
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function getAllUnownedItems() {
+  const res = await fetch(`${BASE}/lists/unowned-items`);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+// ── TMDB ──────────────────────────────────────────────────────────────────────
+
+export async function getTMDBSources() {
+  const res = await fetch(`${BASE}/lists/sources/tmdb/lists`);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function previewTMDBList(tmdbListId) {
+  const res = await fetch(
+    `${BASE}/lists/sources/tmdb/preview?tmdb_list_id=${encodeURIComponent(tmdbListId)}`
+  );
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function importFromTMDB(listId, body) {
+  const res = await fetch(`${BASE}/lists/${listId}/import/tmdb`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
