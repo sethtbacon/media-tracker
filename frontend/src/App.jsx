@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { getMedia, getStats, createMedia, updateMedia, deleteMedia, getMediaById, getSettings } from "./api.js";
 import StatsBar from "./components/StatsBar.jsx";
 import FilterBar, { FILTER_DEFAULTS } from "./components/FilterBar.jsx";
 import MediaTable from "./components/MediaTable.jsx";
 import EditModal from "./components/EditModal.jsx";
+import MediaDetailModal from "./components/MediaDetailModal.jsx";
 import ImportPanel from "./components/ImportPanel.jsx";
 import SettingsPage from "./components/SettingsPage.jsx";
 import PosterGrid from "./components/PosterGrid.jsx";
@@ -21,9 +22,14 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [personNames, setPersonNames] = useState({ p1: "Parent 1", p2: "Parent 2", kidsCount: 0 });
 
-  // Modal state: null = new item, object = edit item, modalOpen controls visibility
+  // Edit modal state: null = new item, object = edit item
   const [modalItem, setModalItem] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
+  // Detail modal state
+  const [detailItem, setDetailItem] = useState(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  // When edit is opened from detail, store the id so we can re-open detail after save
+  const editFromDetailId = useRef(null);
   const [displayMode, setDisplayMode] = useState("posters"); // "table" | "posters"
 
   // Check URL for ?session= param to auto-navigate to Movie Night
@@ -76,12 +82,21 @@ export default function App() {
     fetchMedia(filters, newSkip, true);
   }
 
-  function openNew()        { setModalItem(null); setModalOpen(true); }
-  function openEdit(item)   { setModalItem(item); setModalOpen(true); }
-  function closeModal()     { setModalOpen(false); setModalItem(null); }
+  function openNew()          { setModalItem(null); setModalOpen(true); }
+  function openEdit(item)     { setModalItem(item); setModalOpen(true); }
+  function closeModal()       { setModalOpen(false); setModalItem(null); }
+  function openDetail(item)   { setDetailItem(item); setDetailOpen(true); }
+  function closeDetail()      { setDetailOpen(false); setDetailItem(null); }
+  function openEditFromDetail() {
+    editFromDetailId.current = detailItem?.id ?? null;
+    setDetailOpen(false);
+    setModalItem(detailItem);
+    setModalOpen(true);
+  }
 
   async function handleSave(formData) {
     try {
+      const savedId = modalItem?.id;
       if (modalItem) {
         await updateMedia(modalItem.id, formData);
       } else {
@@ -91,6 +106,11 @@ export default function App() {
       setSkip(0);
       fetchMedia(filters, 0);
       fetchStats();
+      if (editFromDetailId.current && savedId) {
+        const refreshed = await getMediaById(savedId);
+        openDetail(refreshed);
+        editFromDetailId.current = null;
+      }
     } catch (e) {
       alert("Save failed: " + e.message);
     }
@@ -107,22 +127,30 @@ export default function App() {
     }
   }
 
-  async function handleToggleWatchedPerson(id, field, value) {
-    setItems((prev) => prev.map((i) => {
-      if (i.id !== id) return i;
-      const updated = { ...i, [field]: value };
-      updated.watched = !!(updated.watched_parent1 || updated.watched_parent2 || updated.watched_kids);
-      return updated;
-    }));
+  async function handleSaveField(id, field, value) {
+    setDetailItem((prev) => prev?.id === id ? { ...prev, [field]: value } : prev);
+    setItems((prev) => prev.map((i) => i.id !== id ? i : { ...i, [field]: value }));
     try {
       await updateMedia(id, { [field]: value });
     } catch (e) {
-      setItems((prev) => prev.map((i) => {
-        if (i.id !== id) return i;
-        const reverted = { ...i, [field]: !value };
-        reverted.watched = !!(reverted.watched_parent1 || reverted.watched_parent2 || reverted.watched_kids);
-        return reverted;
-      }));
+      console.error("Failed to save field", field, e);
+    }
+  }
+
+  function applyWatchedUpdate(item, field, value) {
+    const updated = { ...item, [field]: value };
+    updated.watched = !!(updated.watched_parent1 || updated.watched_parent2 || updated.watched_kids);
+    return updated;
+  }
+
+  async function handleToggleWatchedPerson(id, field, value) {
+    setItems((prev) => prev.map((i) => i.id !== id ? i : applyWatchedUpdate(i, field, value)));
+    setDetailItem((prev) => prev?.id === id ? applyWatchedUpdate(prev, field, value) : prev);
+    try {
+      await updateMedia(id, { [field]: value });
+    } catch (e) {
+      setItems((prev) => prev.map((i) => i.id !== id ? i : applyWatchedUpdate(i, field, !value)));
+      setDetailItem((prev) => prev?.id === id ? applyWatchedUpdate(prev, field, !value) : prev);
       console.error("Failed to toggle watched", e);
     }
   }
@@ -131,8 +159,7 @@ export default function App() {
     try {
       const item = await getMediaById(id);
       setView("library");
-      setModalItem(item);
-      setModalOpen(true);
+      openDetail(item);
     } catch (e) {
       console.error("Failed to open item in library", e);
     }
@@ -200,6 +227,7 @@ export default function App() {
           {displayMode === "table" ? (
             <MediaTable
               items={items}
+              onDetail={openDetail}
               onEdit={openEdit}
               onDelete={handleDelete}
               onLoadMore={handleLoadMore}
@@ -210,7 +238,7 @@ export default function App() {
           ) : (
             <PosterGrid
               items={items}
-              onEdit={openEdit}
+              onDetail={openDetail}
               onLoadMore={handleLoadMore}
               hasMore={hasMore}
             />
@@ -223,6 +251,18 @@ export default function App() {
       {view === "movie-night" && <MovieNightPage initialSessionCode={urlSession} onOpenInLibrary={handleOpenInLibrary} />}
 
       {view === "lists" && <ListsPage onOpenInLibrary={handleOpenInLibrary} />}
+
+      {detailOpen && detailItem && (
+        <MediaDetailModal
+          item={detailItem}
+          personNames={personNames}
+          onEdit={openEditFromDetail}
+          onDelete={handleDelete}
+          onClose={closeDetail}
+          onToggleWatchedPerson={handleToggleWatchedPerson}
+          onSaveField={handleSaveField}
+        />
+      )}
 
       {modalOpen && (
         <EditModal

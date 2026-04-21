@@ -1,13 +1,4 @@
-function formatRuntime(minutes) {
-  if (!minutes) return null;
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  if (h > 0 && m > 0) return `${h}h ${m}m`;
-  if (h > 0) return `${h}h`;
-  return `${m}m`;
-}
-
-export default function PosterGrid({ items, onEdit, onLoadMore, hasMore }) {
+export default function PosterGrid({ items, onDetail, onLoadMore, hasMore }) {
   if (items.length === 0) {
     return <div className="empty-state"><p>No items found.</p></div>;
   }
@@ -15,15 +6,14 @@ export default function PosterGrid({ items, onEdit, onLoadMore, hasMore }) {
   return (
     <div className="poster-grid">
       {items.map((item) => {
-        const runtime = formatRuntime(item.runtime);
         return (
           <div
             key={item.id}
             className="poster-card"
-            onClick={() => onEdit(item)}
+            onClick={() => onDetail(item)}
             role="button"
             tabIndex={0}
-            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onEdit(item); }}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onDetail(item); }}
           >
             {/* Image area — clipped with rounded corners */}
             <div className="poster-image-wrap">
@@ -60,8 +50,6 @@ export default function PosterGrid({ items, onEdit, onLoadMore, hasMore }) {
               </div>
             </div>
 
-            {/* Runtime below the image */}
-            {runtime && <div className="poster-runtime">{runtime}</div>}
           </div>
         );
       })}

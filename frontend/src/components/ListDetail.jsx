@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getList, deleteListItem, updateMedia, updateListItem, getSettings } from "../api.js";
+import { getList, deleteListItem, updateMedia, updateListItem, getSettings, refreshPosters } from "../api.js";
 
 const FILTER_OPTIONS = [
   ["all", "All"],
@@ -123,6 +123,20 @@ export default function ListDetail({
     }
   }
 
+  const [refreshingPosters, setRefreshingPosters] = useState(false);
+  async function handleRefreshPosters() {
+    setRefreshingPosters(true);
+    try {
+      const result = await refreshPosters(listId);
+      await loadList(true);
+      onShowToast(`Updated ${result.updated} poster${result.updated !== 1 ? "s" : ""}`, "success");
+    } catch (e) {
+      onShowToast("Poster refresh failed: " + e.message, "error");
+    } finally {
+      setRefreshingPosters(false);
+    }
+  }
+
   if (loading || !list) {
     return (
       <div className="list-detail">
@@ -200,6 +214,16 @@ export default function ListDetail({
             {list.unowned > 0 && (
               <button className="btn btn-ghost" onClick={onShop}>🛒 Shopping List</button>
             )}
+            {list.source_ref?.startsWith("tmdb:") && (
+              <button
+                className="btn btn-ghost"
+                onClick={handleRefreshPosters}
+                disabled={refreshingPosters}
+                title="Fetch missing posters from TMDB"
+              >
+                {refreshingPosters ? "Refreshing…" : "🖼 Refresh Posters"}
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -271,26 +295,28 @@ export default function ListDetail({
                     {item.rank ?? "—"}
                   </td>
 
-                  <td className="title-cell">
-                    {(item.media_cover_url || item.poster_url) && (
-                      <img
-                        src={item.media_cover_url || item.poster_url}
-                        alt=""
-                        className="poster-thumb"
-                        onError={(e) => { e.target.style.display = "none"; }}
-                      />
-                    )}
-                    {item.owned ? (
-                      <a
-                        className="title-link"
-                        href="#"
-                        onClick={(e) => { e.preventDefault(); onOpenInLibrary(item.media_id); }}
-                      >
-                        {item.title}
-                      </a>
-                    ) : (
-                      <span>{item.title}</span>
-                    )}
+                  <td>
+                    <div className="list-title-inner">
+                      {(item.media_cover_url || item.poster_url) && (
+                        <img
+                          src={item.media_cover_url || item.poster_url}
+                          alt=""
+                          className="poster-thumb"
+                          onError={(e) => { e.target.style.display = "none"; }}
+                        />
+                      )}
+                      {item.owned ? (
+                        <a
+                          className="title-link"
+                          href="#"
+                          onClick={(e) => { e.preventDefault(); onOpenInLibrary(item.media_id); }}
+                        >
+                          {item.title}
+                        </a>
+                      ) : (
+                        <span>{item.title}</span>
+                      )}
+                    </div>
                   </td>
 
                   <td>{item.year ?? ""}</td>

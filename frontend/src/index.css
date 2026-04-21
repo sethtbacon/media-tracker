@@ -2019,10 +2019,29 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* Item table enhancements */
-.list-item-table .title-cell {
+/* Keep td as a normal table-cell (no display:flex) so it participates in
+   the shared row-height mechanism — putting display:flex on the td breaks
+   that and causes border-bottom misalignment when adjacent rows differ in
+   height (poster vs no poster). */
+.list-item-table td {
+  overflow: hidden; /* clip cell content */
+}
+
+/* Inner div handles the poster + title flex layout */
+.list-title-inner {
   display: flex;
   align-items: center;
   gap: 8px;
+  overflow: hidden;
+}
+
+/* Text truncation on the flex children */
+.list-title-inner a,
+.list-title-inner span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 .poster-thumb {
   width: 28px;
@@ -2451,4 +2470,456 @@ input:focus, select:focus, textarea:focus {
 
 .list-item-skipped .not-interested-btn {
   opacity: 1;
+}
+
+/* ── Detail Modal ──────────────────────────────────────────────────────────── */
+
+.modal-detail {
+  max-width: 560px;
+  max-height: calc(100dvh - 80px);
+  overflow: hidden; /* hero bleeds to edges; body scrolls independently */
+}
+
+/* Hero */
+.detail-hero {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  background: var(--surface2);
+  overflow: hidden;
+  border-radius: 10px 10px 0 0;
+  flex-shrink: 0;
+}
+
+.detail-hero-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  display: block;
+}
+
+.detail-hero-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 20px;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: linear-gradient(135deg, var(--surface2) 0%, var(--bg) 100%);
+}
+
+.detail-hero-gradient {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    transparent 40%,
+    color-mix(in srgb, var(--surface) 70%, transparent) 75%,
+    var(--surface) 100%
+  );
+  pointer-events: none;
+}
+
+/* Top-right action cluster */
+.detail-secondary-actions {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 6px;
+  z-index: 2;
+}
+
+.detail-action-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: var(--text);
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s;
+  line-height: 1;
+}
+
+.detail-action-btn:hover {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.detail-action-btn-danger:hover {
+  background: color-mix(in srgb, var(--danger) 60%, rgba(0, 0, 0, 0.6));
+}
+
+/* Body */
+.detail-body {
+  padding: 0 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Title block */
+.detail-title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.detail-title {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--text);
+  margin: 0;
+}
+
+.detail-meta-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.detail-mpaa-pill {
+  background: color-mix(in srgb, var(--text-muted) 15%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+}
+
+.detail-genres {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.detail-genre-chip {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent-hover);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+/* Watched + Format row */
+.detail-action-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.detail-watched-group {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.detail-watched-dot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 8px;
+  transition: background 0.15s;
+  min-width: 52px;
+}
+
+.detail-watched-dot:hover {
+  background: var(--surface2);
+}
+
+.detail-watched-indicator {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: transparent;
+  transition: background 0.15s, border-color 0.15s;
+  display: block;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.detail-watched-dot.on .detail-watched-indicator {
+  background: var(--success);
+  border-color: var(--success);
+}
+
+.detail-watched-dot.on .detail-watched-indicator::after {
+  content: "✓";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: #fff;
+  font-weight: 700;
+}
+
+.detail-watched-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 60px;
+  text-align: center;
+}
+
+.detail-watched-dot.on .detail-watched-label {
+  color: var(--success);
+}
+
+/* Format badges */
+.detail-format-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.detail-format-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  color: var(--accent-hover);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  letter-spacing: 0.03em;
+}
+
+.detail-format-badge.off {
+  background: transparent;
+  color: var(--text-muted);
+  border-color: var(--border);
+  opacity: 0.4;
+}
+
+.detail-not-interested {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--warning) 12%, transparent);
+  color: var(--warning);
+  border: 1px solid color-mix(in srgb, var(--warning) 25%, transparent);
+}
+
+/* Chips */
+.detail-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.detail-location-chip {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  text-transform: capitalize;
+}
+
+/* Plot */
+.detail-plot-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.detail-plot {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text-muted);
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.detail-plot.expanded {
+  display: block;
+  overflow: visible;
+  -webkit-line-clamp: unset;
+}
+
+.detail-plot-toggle {
+  background: transparent;
+  border: none;
+  color: var(--accent-hover);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+  align-self: flex-start;
+}
+
+.detail-plot-toggle:hover { text-decoration: underline; }
+
+/* Info section */
+.detail-info-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.detail-section-heading {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 6px;
+}
+
+.detail-info-row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.detail-info-label {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.detail-info-value {
+  color: var(--text);
+  word-break: break-word;
+}
+
+.detail-info-value a {
+  color: var(--accent-hover);
+  text-decoration: none;
+}
+
+.detail-info-value a:hover { text-decoration: underline; }
+
+/* Per-person watched + rating rows */
+.detail-people-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.detail-person-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.detail-person-watch-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 0;
+  flex: 1;
+  text-align: left;
+}
+
+.detail-person-watch-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--border);
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.detail-person-watch-btn.on .detail-person-watch-dot {
+  background: var(--success);
+}
+
+.detail-person-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  transition: color 0.15s;
+}
+
+.detail-person-watch-btn.on .detail-person-name {
+  color: var(--text);
+}
+
+/* One-click rating buttons: 👎 👍 ❤️ */
+.detail-rating-btns {
+  display: flex;
+  gap: 6px;
+}
+
+.detail-rating-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  background: var(--surface2);
+  font-size: 17px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.45;
+  transition: opacity 0.15s, transform 0.12s, border-color 0.15s, background 0.15s;
+  line-height: 1;
+}
+
+.detail-rating-btn:hover {
+  opacity: 0.85;
+  transform: scale(1.12);
+}
+
+.detail-rating-btn.active {
+  opacity: 1;
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 22%, var(--surface2));
+  transform: scale(1.08);
+}
+
+/* Desktop: wider hero, more padding */
+@media (min-width: 640px) {
+  .detail-hero {
+    aspect-ratio: 16 / 7;
+  }
+
+  .detail-body {
+    padding: 0 24px 24px;
+  }
+
+  .detail-title {
+    font-size: 26px;
+  }
 }

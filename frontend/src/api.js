@@ -278,3 +278,9 @@ export async function importFromTMDB(listId, body) {
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
+
+export async function refreshPosters(listId) {
+  const res = await fetch(`${BASE}/lists/${listId}/refresh-posters`, { method: "POST" });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}

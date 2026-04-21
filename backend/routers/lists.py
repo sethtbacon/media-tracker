@@ -602,3 +602,50 @@ def import_from_tmdb(list_id: int, body: TMDBImportRequest, db: Session = Depend
     stats = _do_import_and_match(db, target_id, new_items)
     db.commit()
     return {**stats, "errors": errors}
+
+
+# ── Poster backfill ───────────────────────────────────────────────────────────
+
+@router.post("/lists/{list_id}/refresh-posters")
+def refresh_posters(list_id: int, db: Session = Depends(get_db)):
+    """Re-fetch the TMDB source list and fill in any missing poster_url values.
+    Does NOT touch watched_* or not_interested — safe to run on existing data."""
+    ml = db.query(MediaList).filter(MediaList.id == list_id).first()
+    if not ml:
+        raise HTTPException(status_code=404, detail="List not found")
+    if not ml.source_ref or not ml.source_ref.startswith("tmdb:"):
+        raise HTTPException(status_code=400, detail="List has no TMDB source reference")
+    api_key = _get_tmdb_key(db)
+    if not api_key:
+        raise HTTPException(status_code=503, detail="TMDB API key not configured.")
+
+    tmdb_list_id = ml.source_ref[len("tmdb:"):]
+
+    # Build tmdb_id → poster_url map by fetching all pages of the source list
+    tmdb_posters: dict = {}
+    page = 1
+    while True:
+        try:
+            data = _tmdb_fetch_page(api_key, tmdb_list_id, page=page)
+        except HTTPException:
+            break
+        for result in data.get("results", []):
+            poster_path = result.get("poster_path")
+            if poster_path:
+                tmdb_posters[str(result["id"])] = f"https://image.tmdb.org/t/p/w185{poster_path}"
+        if page >= data.get("total_pages", 1):
+            break
+        page += 1
+
+    # Update list_items that have a matching tmdb_id
+    items = db.query(ListItem).filter(ListItem.list_id == list_id).all()
+    updated = 0
+    for item in items:
+        if item.tmdb_id and item.tmdb_id in tmdb_posters:
+            new_url = tmdb_posters[item.tmdb_id]
+            if item.poster_url != new_url:
+                item.poster_url = new_url
+                updated += 1
+
+    db.commit()
+    return {"updated": updated, "total": len(items)}

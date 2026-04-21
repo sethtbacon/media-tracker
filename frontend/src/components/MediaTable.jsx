@@ -19,7 +19,7 @@ const FIXED_COLUMNS = [
   { key: "mpaa_rating",     label: "Rated",    sortable: true },
 ];
 
-export default function MediaTable({ items, onEdit, onDelete, onLoadMore, hasMore, onToggleWatchedPerson, personNames }) {
+export default function MediaTable({ items, onDetail, onEdit, onDelete, onLoadMore, hasMore, onToggleWatchedPerson, personNames }) {
   const [sortCol, setSortCol] = useState("title");
   const [sortDir, setSortDir] = useState("asc");
   const pn = personNames || { p1: "P1", p2: "P2", kidsCount: 0 };
@@ -103,7 +103,7 @@ export default function MediaTable({ items, onEdit, onDelete, onLoadMore, hasMor
                 <a
                   className="title-link"
                   href="#"
-                  onClick={(e) => { e.preventDefault(); onEdit(item); }}
+                  onClick={(e) => { e.preventDefault(); onDetail(item); }}
                 >
                   {item.title}
                 </a>
