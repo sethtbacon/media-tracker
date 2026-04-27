@@ -232,6 +232,7 @@ export default function App() {
               onDelete={handleDelete}
               onLoadMore={handleLoadMore}
               hasMore={hasMore}
+              loading={loading}
               onToggleWatchedPerson={handleToggleWatchedPerson}
               personNames={personNames}
             />
@@ -241,6 +242,7 @@ export default function App() {
               onDetail={openDetail}
               onLoadMore={handleLoadMore}
               hasMore={hasMore}
+              loading={loading}
             />
           )}
         </>

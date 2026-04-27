@@ -1,4 +1,10 @@
-export default function PosterGrid({ items, onDetail, onLoadMore, hasMore }) {
+import { useRef } from "react";
+import useInfiniteScroll from "../hooks/useInfiniteScroll.js";
+
+export default function PosterGrid({ items, onDetail, onLoadMore, hasMore, loading }) {
+  const sentinelRef = useRef(null);
+  useInfiniteScroll(sentinelRef, onLoadMore, { hasMore, loading });
+
   if (items.length === 0) {
     return <div className="empty-state"><p>No items found.</p></div>;
   }
@@ -54,12 +60,9 @@ export default function PosterGrid({ items, onDetail, onLoadMore, hasMore }) {
         );
       })}
 
-      {hasMore && (
-        <div className="poster-load-more">
-          <button className="btn btn-ghost" onClick={onLoadMore}>
-            Load more…
-          </button>
-        </div>
+      {hasMore && <div ref={sentinelRef} className="poster-load-sentinel" />}
+      {loading && items.length > 0 && (
+        <div className="poster-loading"><span className="spinner" /></div>
       )}
     </div>
   );

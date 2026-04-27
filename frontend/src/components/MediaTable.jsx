@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
+import useInfiniteScroll from "../hooks/useInfiniteScroll.js";
 
 function Dot({ value }) {
   return <span className={`dot ${value ? "on" : "off"}`} />;
@@ -19,10 +20,12 @@ const FIXED_COLUMNS = [
   { key: "mpaa_rating",     label: "Rated",    sortable: true },
 ];
 
-export default function MediaTable({ items, onDetail, onEdit, onDelete, onLoadMore, hasMore, onToggleWatchedPerson, personNames }) {
+export default function MediaTable({ items, onDetail, onEdit, onDelete, onLoadMore, hasMore, loading, onToggleWatchedPerson, personNames }) {
   const [sortCol, setSortCol] = useState("title");
   const [sortDir, setSortDir] = useState("asc");
   const pn = personNames || { p1: "P1", p2: "P2", kidsCount: 0 };
+  const sentinelRef = useRef(null);
+  useInfiniteScroll(sentinelRef, onLoadMore, { hasMore, loading });
 
   function handleHeaderClick(col) {
     if (!col.sortable) return;
@@ -181,14 +184,9 @@ export default function MediaTable({ items, onDetail, onEdit, onDelete, onLoadMo
               </td>
             </tr>
           ))}
-          {hasMore && (
-            <tr className="load-more-row">
-              <td colSpan={totalCols}>
-                <button className="btn btn-ghost" onClick={onLoadMore}>
-                  Load more…
-                </button>
-              </td>
-            </tr>
+          {hasMore && <tr><td ref={sentinelRef} colSpan={totalCols} className="infinite-sentinel-row" /></tr>}
+          {loading && items.length > 0 && (
+            <tr><td colSpan={totalCols} className="infinite-loading-row"><span className="spinner" /></td></tr>
           )}
         </tbody>
       </table>
