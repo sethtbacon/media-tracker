@@ -363,6 +363,82 @@ def get_all_unowned_items(db: Session = Depends(get_db)):
     return {"items": result, "total": len(result)}
 
 
+# ── Scan library for collections ─────────────────────────────────────────────
+
+@router.post("/lists/scan-collections")
+def scan_collections(db: Session = Depends(get_db)):
+    """Create collection lists for every distinct tmdb_collection_id in the library
+    that doesn't already have a list. Skips any collection already tracked."""
+    api_key = _get_tmdb_key(db)
+    if not api_key:
+        raise HTTPException(status_code=503, detail="TMDB API key not configured.")
+
+    rows = (
+        db.query(MediaItem.tmdb_collection_id, MediaItem.tmdb_collection_name)
+        .filter(
+            MediaItem.tmdb_collection_id.isnot(None),
+            MediaItem.tmdb_collection_name.isnot(None),
+        )
+        .distinct()
+        .all()
+    )
+
+    created = 0
+    skipped = 0
+
+    for collection_id, collection_name in rows:
+        existing = db.query(MediaList).filter(
+            MediaList.source_ref == f"tmdb-collection:{collection_id}",
+            MediaList.is_archived == False,  # noqa: E712
+        ).first()
+        if existing:
+            skipped += 1
+            continue
+
+        url = (
+            f"https://api.themoviedb.org/3/collection/{collection_id}"
+            f"?api_key={api_key}&language=en-US"
+        )
+        try:
+            with urlopen(url, timeout=10) as resp:
+                data = json.loads(resp.read().decode())
+        except URLError:
+            skipped += 1
+            continue
+
+        ml = MediaList(
+            name=collection_name,
+            list_type="external",
+            source_name="TMDB",
+            source_ref=f"tmdb-collection:{collection_id}",
+        )
+        db.add(ml)
+        db.flush()
+
+        parts = sorted(data.get("parts", []), key=lambda p: p.get("release_date") or "")
+        new_items = []
+        for rank, part in enumerate(parts, 1):
+            title = part.get("title") or ""
+            raw_date = part.get("release_date") or ""
+            year = int(raw_date[:4]) if raw_date and len(raw_date) >= 4 else None
+            poster_path = part.get("poster_path")
+            poster_url = f"https://image.tmdb.org/t/p/w185{poster_path}" if poster_path else None
+            new_items.append(ListItem(
+                list_id=ml.id,
+                rank=rank,
+                title=title,
+                year=year,
+                tmdb_id=str(part["id"]),
+                poster_url=poster_url,
+            ))
+
+        _do_import_and_match(db, ml.id, new_items)
+        db.commit()
+        created += 1
+
+    return {"created": created, "skipped": skipped}
+
+
 # ── From TMDB collection ──────────────────────────────────────────────────────
 
 @router.post("/lists/from-collection", response_model=ListOut, status_code=201)

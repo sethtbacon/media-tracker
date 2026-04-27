@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { getSettings, updateSetting, fetchMetadataStatus, fetchMissingMetadata, uploadFavicon, deleteFavicon } from "../api.js";
+import { getSettings, updateSetting, fetchMetadataStatus, fetchMissingMetadata, uploadFavicon, deleteFavicon, scanCollections } from "../api.js";
 
 export default function SettingsPage() {
   const [omdbKey, setOmdbKey] = useState("");
@@ -17,6 +17,10 @@ export default function SettingsPage() {
   const [fetchTotals, setFetchTotals] = useState({ updated: 0, not_found: 0, failed: 0 });
   const [fetchDone, setFetchDone] = useState(false);
   const [fetchError, setFetchError] = useState(null);
+
+  const [scanRunning, setScanRunning] = useState(false);
+  const [scanResult, setScanResult] = useState(null);
+  const [scanError, setScanError] = useState(null);
 
   // Household members
   const [p1Name, setP1Name] = useState("Parent 1");
@@ -165,6 +169,22 @@ export default function SettingsPage() {
       setFetchError(err.message);
     } finally {
       setFetchRunning(false);
+    }
+  }
+
+  async function handleScanCollections() {
+    setScanRunning(true);
+    setScanResult(null);
+    setScanError(null);
+    try {
+      const result = await scanCollections();
+      setScanResult(result);
+    } catch (err) {
+      setScanError(err.message.includes("503") || err.message.includes("TMDB")
+        ? "TMDB API key not configured. Add it above first."
+        : "Scan failed: " + err.message);
+    } finally {
+      setScanRunning(false);
     }
   }
 
@@ -383,6 +403,38 @@ export default function SettingsPage() {
             <p className="settings-error">{fetchError}</p>
           )}
         </div>
+      </section>
+
+      {/* ── Collection Lists ── */}
+      <section className="settings-section">
+        <h2 className="settings-section-title">Collection Lists</h2>
+        <p className="settings-description">
+          Scan your entire library and automatically create a tracking list for every
+          franchise collection found (Star Wars, Lord of the Rings, MCU, etc.).
+          Requires a TMDB API key and at least one Bulk Metadata Fetch to have been run.
+          Already-existing collection lists are skipped.
+        </p>
+        <div className="settings-input-row">
+          <button
+            className="btn btn-primary"
+            onClick={handleScanCollections}
+            disabled={scanRunning}
+          >
+            {scanRunning ? "Scanning…" : "Scan for Collections"}
+          </button>
+        </div>
+        {scanResult && (
+          <div className="settings-fetch-progress" style={{ marginTop: 8 }}>
+            <span className="settings-success">{scanResult.created} list{scanResult.created !== 1 ? "s" : ""} created</span>
+            {scanResult.skipped > 0 && (
+              <span className="settings-muted"> · {scanResult.skipped} already existed</span>
+            )}
+            {scanResult.created === 0 && scanResult.skipped === 0 && (
+              <span className="settings-muted"> · No collections found — run Bulk Metadata Fetch first</span>
+            )}
+          </div>
+        )}
+        {scanError && <p className="settings-error">{scanError}</p>}
       </section>
 
       {/* ── Household Members ── */}

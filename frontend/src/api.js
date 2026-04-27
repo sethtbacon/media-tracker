@@ -299,6 +299,12 @@ export async function refreshPosters(listId) {
   return res.json();
 }
 
+export async function scanCollections() {
+  const res = await fetch(`${BASE}/lists/scan-collections`, { method: "POST" });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
 export async function tmdbCollectionLookup(title, year, imdbId) {
   const qs = new URLSearchParams();
   if (title) qs.append("title", title);
