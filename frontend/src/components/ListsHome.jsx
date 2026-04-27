@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { createList, deleteList } from "../api.js";
 import ListCard from "./ListCard.jsx";
+import CollectionCard from "./CollectionCard.jsx";
 import ListCreateModal from "./ListCreateModal.jsx";
 
 export default function ListsHome({ lists, onSelect, onShop, onFromTMDB, onRefetch, onShowToast }) {
   const [showCreate, setShowCreate] = useState(false);
+  const [tab, setTab] = useState("lists");
 
   async function handleCreate(data) {
     try {
@@ -26,6 +28,9 @@ export default function ListsHome({ lists, onSelect, onShop, onFromTMDB, onRefet
     }
   }
 
+  const collections = lists.filter((l) =>  l.source_ref?.startsWith("tmdb-collection:"));
+  const regularLists = lists.filter((l) => !l.source_ref?.startsWith("tmdb-collection:"));
+
   return (
     <div className="lists-home">
       <div className="lists-home-header">
@@ -43,19 +48,32 @@ export default function ListsHome({ lists, onSelect, onShop, onFromTMDB, onRefet
         </div>
       </div>
 
-      {lists.length === 0 ? (
-        <div className="empty-state">
-          <p>No lists yet. Create one to start tracking your collection against curated lists.</p>
-          <button className="btn btn-primary" style={{ marginTop: 12 }} onClick={() => setShowCreate(true)}>
-            Create your first list
-          </button>
-        </div>
-      ) : (() => {
-        const collections = lists.filter((l) => l.source_ref?.startsWith("tmdb-collection:"));
-        const others      = lists.filter((l) => !l.source_ref?.startsWith("tmdb-collection:"));
-        const renderGrid  = (items) => (
+      <div className="lists-tab-bar">
+        <button
+          className={`lists-tab${tab === "lists" ? " active" : ""}`}
+          onClick={() => setTab("lists")}
+        >
+          Lists {regularLists.length > 0 && <span className="lists-tab-count">{regularLists.length}</span>}
+        </button>
+        <button
+          className={`lists-tab${tab === "collections" ? " active" : ""}`}
+          onClick={() => setTab("collections")}
+        >
+          Collections {collections.length > 0 && <span className="lists-tab-count">{collections.length}</span>}
+        </button>
+      </div>
+
+      {tab === "lists" && (
+        regularLists.length === 0 ? (
+          <div className="empty-state">
+            <p>No lists yet. Create one or import from TMDB to start tracking.</p>
+            <button className="btn btn-primary" style={{ marginTop: 12 }} onClick={() => setShowCreate(true)}>
+              Create your first list
+            </button>
+          </div>
+        ) : (
           <div className="lists-grid">
-            {items.map((list) => (
+            {regularLists.map((list) => (
               <ListCard
                 key={list.id}
                 list={list}
@@ -65,24 +83,27 @@ export default function ListsHome({ lists, onSelect, onShop, onFromTMDB, onRefet
               />
             ))}
           </div>
-        );
-        return (
-          <>
-            {collections.length > 0 && (
-              <div className="lists-section">
-                <h2 className="lists-section-title">Franchise Collections</h2>
-                {renderGrid(collections)}
-              </div>
-            )}
-            {others.length > 0 && (
-              <div className="lists-section">
-                {collections.length > 0 && <h2 className="lists-section-title">Lists</h2>}
-                {renderGrid(others)}
-              </div>
-            )}
-          </>
-        );
-      })()}
+        )
+      )}
+
+      {tab === "collections" && (
+        collections.length === 0 ? (
+          <div className="empty-state">
+            <p>No franchise collections yet. Go to Settings → Collection Lists and click <strong>Scan for Collections</strong>.</p>
+          </div>
+        ) : (
+          <div className="collections-grid">
+            {collections.map((list) => (
+              <CollectionCard
+                key={list.id}
+                list={list}
+                onSelect={() => onSelect(list)}
+                onDelete={() => handleDelete(list.id, list.name)}
+              />
+            ))}
+          </div>
+        )
+      )}
 
       {showCreate && (
         <ListCreateModal

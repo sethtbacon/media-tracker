@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { getSettings, updateSetting, fetchMetadataStatus, fetchMissingMetadata, uploadFavicon, deleteFavicon, scanCollections } from "../api.js";
+import ImportPanel from "./ImportPanel.jsx";
 
-export default function SettingsPage() {
+export default function SettingsPage({ onImportDone = () => {} }) {
   const [omdbKey, setOmdbKey] = useState("");
   const [showKey, setShowKey] = useState(false);
   const [keyStatus, setKeyStatus] = useState(null);
@@ -577,6 +578,16 @@ export default function SettingsPage() {
             )}
           </div>
         </form>
+      </section>
+      {/* ── Data ── */}
+      <section className="settings-section">
+        <h2 className="settings-section-title">Data</h2>
+        <p className="settings-description">
+          Import a CSV to add or update your library. By default the import merges with existing
+          items — check <strong>Replace all</strong> to wipe the database first (destructive).
+          Export downloads a full CSV backup of your entire library.
+        </p>
+        <ImportPanel onImportDone={onImportDone} filters={{}} />
       </section>
     </div>
   );

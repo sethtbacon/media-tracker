@@ -153,7 +153,10 @@ export default function MovieNightPage({ initialSessionCode, onOpenInLibrary }) 
   if (view === "join") {
     return (
       <div className="mn-page">
-        <h2 className="mn-setup-title">Join Session</h2>
+        <div className="mn-page-nav">
+          <button className="btn btn-ghost" onClick={() => { setView("home"); setSession(null); }}>← Back</button>
+          <h2 className="mn-setup-title">Join Session</h2>
+        </div>
         <form className="mn-setup-form" onSubmit={handleJoin}>
           <div className="settings-field">
             <label>Session Code</label>
@@ -200,7 +203,6 @@ export default function MovieNightPage({ initialSessionCode, onOpenInLibrary }) 
           )}
           {joinError && <p className="settings-error">{joinError}</p>}
           <div className="mn-setup-actions">
-            <button type="button" className="btn btn-ghost" onClick={() => { setView("home"); setSession(null); }}>Cancel</button>
             <button type="submit" className="btn btn-primary" disabled={joining}>
               {joining ? "Looking up…" : session ? "Start Swiping" : "Look Up Session"}
             </button>
@@ -248,7 +250,7 @@ export default function MovieNightPage({ initialSessionCode, onOpenInLibrary }) 
         <div className="mn-session-header">
           <span className="mn-session-code">{session.code}</span>
           <button className="btn btn-ghost btn-sm" onClick={() => setView("home")}>
-            Home
+            ← Back
           </button>
         </div>
         <MovieNightMatches
@@ -267,7 +269,7 @@ export default function MovieNightPage({ initialSessionCode, onOpenInLibrary }) 
       <div className="mn-page">
         <div className="mn-page-nav">
           <button className="btn btn-ghost" onClick={() => setView("home")}>← Back</button>
-          <h2 className="mn-setup-title" style={{ margin: 0 }}>Session History</h2>
+          <h2 className="mn-setup-title">Session History</h2>
         </div>
         <MovieNightHistory
           onJoin={(code) => {

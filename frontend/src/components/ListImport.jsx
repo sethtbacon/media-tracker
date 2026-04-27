@@ -180,7 +180,7 @@ function CSVImport({ list, onBack, onDone, onShowToast }) {
       </div>
 
       <div className="modal-footer" style={{ padding: 0, marginTop: 24 }}>
-        <button className="btn btn-ghost" onClick={onBack}>Back</button>
+        <button className="btn btn-ghost" onClick={onBack}>← Back</button>
         <button
           className="btn btn-primary"
           onClick={handleImport}
@@ -269,7 +269,7 @@ function ManualAdd({ list, onBack, onDone, onShowToast }) {
         </div>
       </div>
       <div className="modal-footer" style={{ padding: 0, marginTop: 24 }}>
-        <button className="btn btn-ghost" onClick={onBack}>Back</button>
+        <button className="btn btn-ghost" onClick={onBack}>← Back</button>
         <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
           {saving ? "Adding…" : "Add Item"}
         </button>

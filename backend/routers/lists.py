@@ -149,6 +149,16 @@ def _fmt_dt(dt) -> Optional[str]:
 
 def _build_list_out(db: Session, ml: MediaList) -> dict:
     stats = _get_raw_stats(db, ml.id)
+
+    preview_poster = None
+    if ml.source_ref and ml.source_ref.startswith("tmdb-collection:"):
+        row = (
+            db.query(ListItem.poster_url)
+            .filter(ListItem.list_id == ml.id, ListItem.poster_url.isnot(None))
+            .first()
+        )
+        preview_poster = row[0] if row else None
+
     return {
         "id": ml.id,
         "name": ml.name,
@@ -164,6 +174,7 @@ def _build_list_out(db: Session, ml: MediaList) -> dict:
         "watched_completed_at": _fmt_dt(ml.watched_completed_at),
         "created_at": _fmt_dt(ml.created_at),
         "updated_at": _fmt_dt(ml.updated_at),
+        "preview_poster": preview_poster,
         **stats,
     }
 

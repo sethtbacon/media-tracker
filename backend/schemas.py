@@ -205,6 +205,7 @@ class ListOut(ListBase):
     watched_completed_at: Optional[str] = None
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
+    preview_poster: Optional[str] = None
     # computed stats
     total: int = 0
     owned: int = 0

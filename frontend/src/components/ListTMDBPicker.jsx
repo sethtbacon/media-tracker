@@ -233,7 +233,7 @@ export default function ListTMDBPicker({ list, onBack, onImportDone, onShowToast
 
               <div className="modal-footer" style={{ padding: 0, marginTop: 24 }}>
                 <button className="btn btn-ghost" onClick={() => { setStep("catalog"); setPreview(null); }}>
-                  Back
+                  ← Back
                 </button>
                 <button className="btn btn-primary" onClick={handleImport} disabled={importing}>
                   {importing

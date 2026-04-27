@@ -5,7 +5,6 @@ import FilterBar, { FILTER_DEFAULTS } from "./components/FilterBar.jsx";
 import MediaTable from "./components/MediaTable.jsx";
 import EditModal from "./components/EditModal.jsx";
 import MediaDetailModal from "./components/MediaDetailModal.jsx";
-import ImportPanel from "./components/ImportPanel.jsx";
 import SettingsPage from "./components/SettingsPage.jsx";
 import PosterGrid from "./components/PosterGrid.jsx";
 import MovieNightPage from "./components/MovieNightPage.jsx";
@@ -186,12 +185,6 @@ export default function App() {
             Library
           </button>
           <button
-            className={`nav-btn${view === "settings" ? " active" : ""}`}
-            onClick={() => setView("settings")}
-          >
-            Settings
-          </button>
-          <button
             className={`nav-btn${view === "movie-night" ? " active" : ""}`}
             onClick={() => setView("movie-night")}
           >
@@ -203,15 +196,18 @@ export default function App() {
           >
             Lists
           </button>
+          <button
+            className={`nav-btn${view === "settings" ? " active" : ""}`}
+            onClick={() => setView("settings")}
+          >
+            Settings
+          </button>
         </nav>
         <div className="header-actions">
           {view === "library" && (
-            <>
-              <ImportPanel onImportDone={handleImportDone} filters={filters} />
-              <button className="btn btn-primary" onClick={openNew}>
-                + Add Item
-              </button>
-            </>
+            <button className="btn btn-primary" onClick={openNew}>
+              + Add Item
+            </button>
           )}
         </div>
       </header>
@@ -249,7 +245,7 @@ export default function App() {
         </>
       )}
 
-      {view === "settings" && <SettingsPage />}
+      {view === "settings" && <SettingsPage onImportDone={handleImportDone} />}
 
       {view === "movie-night" && <MovieNightPage initialSessionCode={urlSession} onOpenInLibrary={handleOpenInLibrary} />}
 
