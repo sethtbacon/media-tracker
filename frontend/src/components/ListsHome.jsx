@@ -27,7 +27,9 @@ export default function ListsHome({ lists, tab, onTabChange, onSelect, onShop, o
     }
   }
 
-  const collections = lists.filter((l) =>  l.source_ref?.startsWith("tmdb-collection:"));
+  const collections = lists
+    .filter((l) => l.source_ref?.startsWith("tmdb-collection:"))
+    .sort((a, b) => a.name.localeCompare(b.name));
   const regularLists = lists.filter((l) => !l.source_ref?.startsWith("tmdb-collection:"));
 
   return (
