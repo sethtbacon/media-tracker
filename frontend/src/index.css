@@ -1845,6 +1845,19 @@ input:focus, select:focus, textarea:focus {
   gap: 8px;
 }
 
+/* Section grouping */
+.lists-section {
+  margin-bottom: 32px;
+}
+.lists-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin: 0 0 14px;
+}
+
 /* Grid */
 .lists-grid {
   display: grid;

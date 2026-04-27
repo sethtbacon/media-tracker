@@ -252,6 +252,39 @@ def _get_omdb_key(db: Session) -> Optional[str]:
     return key or os.getenv("OMDB_API_KEY", "").strip() or None
 
 
+def _get_tmdb_key(db: Session) -> Optional[str]:
+    setting = db.query(SystemSetting).filter(SystemSetting.key == "tmdb_api_key").first()
+    key = (setting.value if setting and setting.value else "").strip()
+    return key or os.getenv("TMDB_API_KEY", "").strip() or None
+
+
+def _fetch_tmdb_collection(imdb_id: str, tmdb_api_key: str) -> dict:
+    """Return {tmdb_id, collection_id, collection_name} or all-None dict on failure."""
+    empty = {"tmdb_id": None, "collection_id": None, "collection_name": None}
+    try:
+        url = (
+            f"https://api.themoviedb.org/3/find/{imdb_id}"
+            f"?api_key={tmdb_api_key}&external_source=imdb_id"
+        )
+        with urlopen(url, timeout=8) as resp:
+            find_data = json.loads(resp.read().decode())
+        results = find_data.get("movie_results", [])
+        if not results:
+            return empty
+        tmdb_id = str(results[0]["id"])
+        url = f"https://api.themoviedb.org/3/movie/{tmdb_id}?api_key={tmdb_api_key}&language=en-US"
+        with urlopen(url, timeout=8) as resp:
+            detail = json.loads(resp.read().decode())
+        col = detail.get("belongs_to_collection")
+        return {
+            "tmdb_id": tmdb_id,
+            "collection_id":   col["id"]   if col else None,
+            "collection_name": col["name"] if col else None,
+        }
+    except URLError:
+        return empty
+
+
 def _safe_str(val):
     if not val or val == "N/A":
         return None
@@ -282,7 +315,8 @@ def fetch_missing_metadata(
     db: Session = Depends(get_db),
 ):
     """Fetch OMDB metadata for a batch of items that have no imdb_id yet."""
-    api_key = _get_omdb_key(db)
+    api_key      = _get_omdb_key(db)
+    tmdb_api_key = _get_tmdb_key(db)
     if not api_key:
         raise HTTPException(
             status_code=503,
@@ -336,6 +370,15 @@ def fetch_missing_metadata(
         rated = _safe_str(data.get("Rated"))
         if rated in ("G", "PG", "PG-13", "R", "NC-17", "Not Rated"):
             item.mpaa_rating = rated
+
+        # TMDB collection lookup (if key configured and we have an IMDB ID)
+        if tmdb_api_key and item.imdb_id and item.imdb_id != "NOT_FOUND":
+            col_data = _fetch_tmdb_collection(item.imdb_id, tmdb_api_key)
+            if col_data["tmdb_id"] and not item.tmdb_id:
+                item.tmdb_id = col_data["tmdb_id"]
+            if col_data["collection_id"]:
+                item.tmdb_collection_id   = col_data["collection_id"]
+                item.tmdb_collection_name = col_data["collection_name"]
 
         updated += 1
         time.sleep(0.25)

@@ -666,29 +666,46 @@ def refresh_posters(list_id: int, db: Session = Depends(get_db)):
     ml = db.query(MediaList).filter(MediaList.id == list_id).first()
     if not ml:
         raise HTTPException(status_code=404, detail="List not found")
-    if not ml.source_ref or not ml.source_ref.startswith("tmdb:"):
+    is_collection = ml.source_ref.startswith("tmdb-collection:") if ml.source_ref else False
+    is_tmdb_list  = ml.source_ref.startswith("tmdb:")            if ml.source_ref else False
+    if not is_collection and not is_tmdb_list:
         raise HTTPException(status_code=400, detail="List has no TMDB source reference")
     api_key = _get_tmdb_key(db)
     if not api_key:
         raise HTTPException(status_code=503, detail="TMDB API key not configured.")
 
-    tmdb_list_id = ml.source_ref[len("tmdb:"):]
-
-    # Build tmdb_id → poster_url map by fetching all pages of the source list
     tmdb_posters: dict = {}
-    page = 1
-    while True:
+
+    if is_collection:
+        collection_id = ml.source_ref[len("tmdb-collection:"):]
+        url = (
+            f"https://api.themoviedb.org/3/collection/{collection_id}"
+            f"?api_key={api_key}&language=en-US"
+        )
         try:
-            data = _tmdb_fetch_page(api_key, tmdb_list_id, page=page)
-        except HTTPException:
-            break
-        for result in data.get("results", []):
-            poster_path = result.get("poster_path")
-            if poster_path:
-                tmdb_posters[str(result["id"])] = f"https://image.tmdb.org/t/p/w185{poster_path}"
-        if page >= data.get("total_pages", 1):
-            break
-        page += 1
+            with urlopen(url, timeout=10) as resp:
+                data = json.loads(resp.read().decode())
+            for part in data.get("parts", []):
+                poster_path = part.get("poster_path")
+                if poster_path:
+                    tmdb_posters[str(part["id"])] = f"https://image.tmdb.org/t/p/w185{poster_path}"
+        except URLError as exc:
+            raise HTTPException(status_code=502, detail=f"TMDB request failed: {exc}")
+    else:
+        tmdb_list_id = ml.source_ref[len("tmdb:"):]
+        page = 1
+        while True:
+            try:
+                data = _tmdb_fetch_page(api_key, tmdb_list_id, page=page)
+            except HTTPException:
+                break
+            for result in data.get("results", []):
+                poster_path = result.get("poster_path")
+                if poster_path:
+                    tmdb_posters[str(result["id"])] = f"https://image.tmdb.org/t/p/w185{poster_path}"
+            if page >= data.get("total_pages", 1):
+                break
+            page += 1
 
     # Update list_items that have a matching tmdb_id
     items = db.query(ListItem).filter(ListItem.list_id == list_id).all()

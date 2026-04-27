@@ -50,19 +50,39 @@ export default function ListsHome({ lists, onSelect, onShop, onFromTMDB, onRefet
             Create your first list
           </button>
         </div>
-      ) : (
-        <div className="lists-grid">
-          {lists.map((list) => (
-            <ListCard
-              key={list.id}
-              list={list}
-              onSelect={() => onSelect(list)}
-              onShop={() => onShop(list)}
-              onDelete={() => handleDelete(list.id, list.name)}
-            />
-          ))}
-        </div>
-      )}
+      ) : (() => {
+        const collections = lists.filter((l) => l.source_ref?.startsWith("tmdb-collection:"));
+        const others      = lists.filter((l) => !l.source_ref?.startsWith("tmdb-collection:"));
+        const renderGrid  = (items) => (
+          <div className="lists-grid">
+            {items.map((list) => (
+              <ListCard
+                key={list.id}
+                list={list}
+                onSelect={() => onSelect(list)}
+                onShop={() => onShop(list)}
+                onDelete={() => handleDelete(list.id, list.name)}
+              />
+            ))}
+          </div>
+        );
+        return (
+          <>
+            {collections.length > 0 && (
+              <div className="lists-section">
+                <h2 className="lists-section-title">Franchise Collections</h2>
+                {renderGrid(collections)}
+              </div>
+            )}
+            {others.length > 0 && (
+              <div className="lists-section">
+                {collections.length > 0 && <h2 className="lists-section-title">Lists</h2>}
+                {renderGrid(others)}
+              </div>
+            )}
+          </>
+        );
+      })()}
 
       {showCreate && (
         <ListCreateModal
