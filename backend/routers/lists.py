@@ -1,13 +1,15 @@
 import io
 import json
 import os
+import time
 from datetime import datetime, timezone
 from typing import List, Optional
 from urllib.error import URLError
 from urllib.request import urlopen
 
 import pandas as pd
-from fastapi import APIRouter, Depends, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -366,17 +368,84 @@ def get_all_unowned_items(db: Session = Depends(get_db)):
 # ── Scan library for collections ─────────────────────────────────────────────
 
 @router.post("/lists/scan-collections")
-def scan_collections(db: Session = Depends(get_db)):
-    """Create collection lists for every distinct tmdb_collection_id in the library
-    that doesn't already have a list. Skips any collection already tracked."""
+def scan_collections(
+    batch_size: int = Query(default=50, ge=1, le=100),
+    db: Session = Depends(get_db),
+):
+    """Two-phase scan:
+    1. Backfill tmdb_collection_id for items that have imdb_id but haven't been checked yet.
+       Uses -1 as a sentinel meaning 'checked, no collection' so items aren't re-queried.
+    2. Create tracking lists for every distinct collection found that isn't already tracked.
+    Call repeatedly until remaining=0."""
     api_key = _get_tmdb_key(db)
     if not api_key:
         raise HTTPException(status_code=503, detail="TMDB API key not configured.")
 
+    # Phase 1 — backfill items not yet checked
+    needs_check = (
+        db.query(MediaItem)
+        .filter(
+            MediaItem.imdb_id.isnot(None),
+            MediaItem.imdb_id != "",
+            MediaItem.imdb_id != "NOT_FOUND",
+            MediaItem.tmdb_collection_id.is_(None),
+        )
+        .limit(batch_size)
+        .all()
+    )
+
+    enriched = 0
+    for item in needs_check:
+        try:
+            # Use existing tmdb_id if set, otherwise find via IMDB ID
+            tmdb_movie_id = item.tmdb_id
+            if not tmdb_movie_id:
+                url = (
+                    f"https://api.themoviedb.org/3/find/{item.imdb_id}"
+                    f"?api_key={api_key}&external_source=imdb_id"
+                )
+                with urlopen(url, timeout=8) as resp:
+                    find_data = json.loads(resp.read().decode())
+                results = find_data.get("movie_results", [])
+                if results:
+                    tmdb_movie_id = str(results[0]["id"])
+                    item.tmdb_id = tmdb_movie_id
+                time.sleep(0.05)
+
+            if tmdb_movie_id:
+                url = f"https://api.themoviedb.org/3/movie/{tmdb_movie_id}?api_key={api_key}&language=en-US"
+                with urlopen(url, timeout=8) as resp:
+                    detail = json.loads(resp.read().decode())
+                col = detail.get("belongs_to_collection")
+                if col:
+                    item.tmdb_collection_id   = col["id"]
+                    item.tmdb_collection_name = col["name"]
+                else:
+                    item.tmdb_collection_id = -1  # sentinel: checked, no collection
+                time.sleep(0.05)
+            else:
+                item.tmdb_collection_id = -1  # not on TMDB
+
+        except URLError:
+            pass  # leave NULL so it retries next run
+
+        enriched += 1
+
+    db.commit()
+
+    remaining = db.query(func.count(MediaItem.id)).filter(
+        MediaItem.imdb_id.isnot(None),
+        MediaItem.imdb_id != "",
+        MediaItem.imdb_id != "NOT_FOUND",
+        MediaItem.tmdb_collection_id.is_(None),
+    ).scalar()
+
+    # Phase 2 — create lists for real collections (exclude -1 sentinel)
     rows = (
         db.query(MediaItem.tmdb_collection_id, MediaItem.tmdb_collection_name)
         .filter(
             MediaItem.tmdb_collection_id.isnot(None),
+            MediaItem.tmdb_collection_id > 0,
             MediaItem.tmdb_collection_name.isnot(None),
         )
         .distinct()
@@ -436,7 +505,7 @@ def scan_collections(db: Session = Depends(get_db)):
         db.commit()
         created += 1
 
-    return {"created": created, "skipped": skipped}
+    return {"enriched": enriched, "created": created, "skipped": skipped, "remaining": remaining}
 
 
 # ── From TMDB collection ──────────────────────────────────────────────────────

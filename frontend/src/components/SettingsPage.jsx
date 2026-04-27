@@ -176,9 +176,18 @@ export default function SettingsPage() {
     setScanRunning(true);
     setScanResult(null);
     setScanError(null);
+    let totals = { enriched: 0, created: 0, skipped: 0, remaining: 1 };
     try {
-      const result = await scanCollections();
-      setScanResult(result);
+      while (totals.remaining > 0) {
+        const result = await scanCollections();
+        totals = {
+          enriched:  totals.enriched  + result.enriched,
+          created:   totals.created   + result.created,
+          skipped:   totals.skipped   + result.skipped,
+          remaining: result.remaining,
+        };
+        setScanResult({ ...totals });
+      }
     } catch (err) {
       setScanError(err.message.includes("503") || err.message.includes("TMDB")
         ? "TMDB API key not configured. Add it above first."
@@ -411,8 +420,7 @@ export default function SettingsPage() {
         <p className="settings-description">
           Scan your entire library and automatically create a tracking list for every
           franchise collection found (Star Wars, Lord of the Rings, MCU, etc.).
-          Requires a TMDB API key and at least one Bulk Metadata Fetch to have been run.
-          Already-existing collection lists are skipped.
+          Requires a TMDB API key. Runs in batches — already-existing lists are skipped.
         </p>
         <div className="settings-input-row">
           <button
@@ -425,12 +433,20 @@ export default function SettingsPage() {
         </div>
         {scanResult && (
           <div className="settings-fetch-progress" style={{ marginTop: 8 }}>
-            <span className="settings-success">{scanResult.created} list{scanResult.created !== 1 ? "s" : ""} created</span>
-            {scanResult.skipped > 0 && (
-              <span className="settings-muted"> · {scanResult.skipped} already existed</span>
+            {scanResult.created > 0 && (
+              <span className="settings-success">{scanResult.created} list{scanResult.created !== 1 ? "s" : ""} created</span>
             )}
-            {scanResult.created === 0 && scanResult.skipped === 0 && (
-              <span className="settings-muted"> · No collections found — run Bulk Metadata Fetch first</span>
+            {scanResult.skipped > 0 && (
+              <span className="settings-muted">{scanResult.created > 0 ? " · " : ""}{scanResult.skipped} already existed</span>
+            )}
+            {scanRunning && scanResult.remaining > 0 && (
+              <span className="settings-muted"> · {scanResult.remaining} items remaining…</span>
+            )}
+            {!scanRunning && scanResult.created === 0 && scanResult.skipped === 0 && (
+              <span className="settings-muted">No franchise collections found in your library</span>
+            )}
+            {!scanRunning && scanResult.remaining === 0 && (scanResult.created > 0 || scanResult.skipped > 0) && (
+              <span className="settings-muted"> · done</span>
             )}
           </div>
         )}
