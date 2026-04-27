@@ -70,15 +70,6 @@ export default function App() {
       });
     }).catch(() => {});
 
-    // Swap favicon if a custom one has been uploaded
-    fetch("/api/settings/favicon", { method: "HEAD" })
-      .then(r => {
-        if (r.ok) {
-          const url = `/api/settings/favicon?t=${Date.now()}`;
-          document.querySelectorAll("link[rel*='icon']").forEach(el => { el.href = url; });
-        }
-      })
-      .catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {

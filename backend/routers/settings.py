@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import List
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-from fastapi.responses import Response
+from fastapi.responses import RedirectResponse, Response
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -32,7 +32,7 @@ async def upload_favicon(file: UploadFile = File(...)):
 @router.get("/settings/favicon")
 def get_favicon():
     if not _FAVICON_PATH.exists():
-        raise HTTPException(status_code=404, detail="No custom favicon")
+        return RedirectResponse(url="/favicon.svg", status_code=302)
     ct = _FAVICON_MIME.read_text() if _FAVICON_MIME.exists() else "image/png"
     return Response(
         content=_FAVICON_PATH.read_bytes(),

@@ -65,9 +65,10 @@ export default function SettingsPage() {
       .then((s) => setMissingCount(s.missing))
       .catch(() => {});
 
-    // Check if a custom favicon is already set
+    // Custom favicon: 200 direct. Default: 302 → /favicon.svg.
+    // r.redirected distinguishes them.
     fetch("/api/settings/favicon", { method: "HEAD" })
-      .then(r => { if (r.ok) setFaviconUrl(`/api/settings/favicon?t=${Date.now()}`); })
+      .then(r => { if (r.ok && !r.redirected) setFaviconUrl(`/api/settings/favicon?t=${Date.now()}`); })
       .catch(() => {});
   }, []);
 
