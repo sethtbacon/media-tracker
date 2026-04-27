@@ -24,5 +24,5 @@ export default function useInfiniteScroll(sentinelRef, onLoadMore, { hasMore, lo
 
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [sentinelRef, rootMargin]);
+  }, [sentinelRef, rootMargin, hasMore]);
 }
