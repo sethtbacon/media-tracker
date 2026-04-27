@@ -14,6 +14,7 @@ export default function ListsPage({ onOpenInLibrary }) {
   const [lists, setLists] = useState([]);
   const [activeListId, setActiveListId] = useState(null);  // ID of the selected list
   const [activeList, setActiveList] = useState(null);       // full detail object
+  const [listsTab, setListsTab] = useState("lists");
   const [toast, setToast] = useState(null);
   const toastTimer = useRef(null);
 
@@ -191,6 +192,8 @@ export default function ListsPage({ onOpenInLibrary }) {
     <div className="lists-page">
       <ListsHome
         lists={lists}
+        tab={listsTab}
+        onTabChange={setListsTab}
         onSelect={navigateToDetail}
         onShop={navigateToShopping}
         onFromTMDB={() => navigateToTMDB(null)}

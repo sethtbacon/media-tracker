@@ -4,9 +4,8 @@ import ListCard from "./ListCard.jsx";
 import CollectionCard from "./CollectionCard.jsx";
 import ListCreateModal from "./ListCreateModal.jsx";
 
-export default function ListsHome({ lists, onSelect, onShop, onFromTMDB, onRefetch, onShowToast }) {
+export default function ListsHome({ lists, tab, onTabChange, onSelect, onShop, onFromTMDB, onRefetch, onShowToast }) {
   const [showCreate, setShowCreate] = useState(false);
-  const [tab, setTab] = useState("lists");
 
   async function handleCreate(data) {
     try {
@@ -51,13 +50,13 @@ export default function ListsHome({ lists, onSelect, onShop, onFromTMDB, onRefet
       <div className="lists-tab-bar">
         <button
           className={`lists-tab${tab === "lists" ? " active" : ""}`}
-          onClick={() => setTab("lists")}
+          onClick={() => onTabChange("lists")}
         >
           Lists {regularLists.length > 0 && <span className="lists-tab-count">{regularLists.length}</span>}
         </button>
         <button
           className={`lists-tab${tab === "collections" ? " active" : ""}`}
-          onClick={() => setTab("collections")}
+          onClick={() => onTabChange("collections")}
         >
           Collections {collections.length > 0 && <span className="lists-tab-count">{collections.length}</span>}
         </button>
