@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { getSettings, updateSetting, fetchMetadataStatus, fetchMissingMetadata } from "../api.js";
+import { useState, useEffect, useRef } from "react";
+import { getSettings, updateSetting, fetchMetadataStatus, fetchMissingMetadata, uploadFavicon, deleteFavicon } from "../api.js";
 
 export default function SettingsPage() {
   const [omdbKey, setOmdbKey] = useState("");
@@ -25,6 +25,11 @@ export default function SettingsPage() {
   const [kidNames, setKidNames] = useState(["Kid 1","Kid 2","Kid 3","Kid 4","Kid 5","Kid 6"]);
   const [memberStatus, setMemberStatus] = useState(null);
   const [memberSaving, setMemberSaving] = useState(false);
+
+  // Favicon
+  const [faviconUrl, setFaviconUrl]   = useState(null); // null = no custom favicon
+  const [faviconStatus, setFaviconStatus] = useState(null);
+  const faviconInputRef = useRef(null);
 
   // Movie Night defaults
   const [mnSize, setMnSize] = useState("18");
@@ -59,7 +64,44 @@ export default function SettingsPage() {
     fetchMetadataStatus()
       .then((s) => setMissingCount(s.missing))
       .catch(() => {});
+
+    // Check if a custom favicon is already set
+    fetch("/api/settings/favicon", { method: "HEAD" })
+      .then(r => { if (r.ok) setFaviconUrl(`/api/settings/favicon?t=${Date.now()}`); })
+      .catch(() => {});
   }, []);
+
+  async function handleFaviconUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFaviconStatus(null);
+    try {
+      await uploadFavicon(file);
+      const url = `/api/settings/favicon?t=${Date.now()}`;
+      setFaviconUrl(url);
+      // Swap the browser tab icon live
+      document.querySelectorAll("link[rel*='icon']").forEach(el => { el.href = url; });
+      setFaviconStatus({ type: "success", msg: "Favicon updated." });
+    } catch (err) {
+      setFaviconStatus({ type: "error", msg: "Upload failed: " + err.message });
+    }
+    e.target.value = "";
+  }
+
+  async function handleFaviconDelete() {
+    setFaviconStatus(null);
+    try {
+      await deleteFavicon();
+      setFaviconUrl(null);
+      // Restore default favicon
+      document.querySelectorAll("link[rel*='icon']").forEach(el => {
+        el.href = el.getAttribute("data-default") || "/favicon.svg";
+      });
+      setFaviconStatus({ type: "success", msg: "Custom favicon removed." });
+    } catch (err) {
+      setFaviconStatus({ type: "error", msg: "Remove failed: " + err.message });
+    }
+  }
 
   async function handleSaveKey(e) {
     e.preventDefault();
@@ -162,6 +204,44 @@ export default function SettingsPage() {
   return (
     <div className="settings-page">
       <h1 className="settings-heading">Settings</h1>
+
+      {/* ── Favicon ── */}
+      <section className="settings-section">
+        <h2 className="settings-section-title">App Icon</h2>
+        <p className="settings-description">
+          Upload a custom favicon to replace the default clapperboard icon in browser tabs and on
+          home screen shortcuts. PNG, SVG, ICO, JPG accepted.
+        </p>
+        <div className="settings-favicon-row">
+          <img
+            className="settings-favicon-preview"
+            src={faviconUrl || "/favicon.svg"}
+            alt="Current favicon"
+          />
+          <div className="settings-input-row">
+            <input
+              ref={faviconInputRef}
+              type="file"
+              accept="image/png,image/svg+xml,image/x-icon,image/jpeg,image/gif,image/webp"
+              style={{ display: "none" }}
+              onChange={handleFaviconUpload}
+            />
+            <button className="btn btn-primary" onClick={() => faviconInputRef.current?.click()}>
+              Upload icon
+            </button>
+            {faviconUrl && (
+              <button className="btn btn-ghost" onClick={handleFaviconDelete}>
+                Remove custom
+              </button>
+            )}
+          </div>
+        </div>
+        {faviconStatus && (
+          <p className={faviconStatus.type === "success" ? "settings-success" : "settings-error"}>
+            {faviconStatus.msg}
+          </p>
+        )}
+      </section>
 
       {/* ── OMDB API Key ── */}
       <section className="settings-section">

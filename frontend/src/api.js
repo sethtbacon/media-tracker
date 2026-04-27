@@ -103,6 +103,20 @@ export async function updateSetting(key, value) {
   return res.json();
 }
 
+export async function uploadFavicon(file) {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch(`${BASE}/settings/favicon`, { method: "POST", body: form });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function deleteFavicon() {
+  const res = await fetch(`${BASE}/settings/favicon`, { method: "DELETE" });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
 export async function lookupMetadata(title, year) {
   const qs = new URLSearchParams({ title });
   if (year) qs.append("year", year);

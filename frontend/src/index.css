@@ -742,6 +742,23 @@ input:focus, select:focus, textarea:focus {
   gap: 2px;
 }
 
+/* Favicon settings */
+.settings-favicon-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.settings-favicon-preview {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  object-fit: contain;
+}
+
 /* ── Display Mode Toggle ───────────────────────────────── */
 .display-toggle {
   display: flex;
