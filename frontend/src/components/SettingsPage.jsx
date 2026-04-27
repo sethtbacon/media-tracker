@@ -75,15 +75,22 @@ export default function SettingsPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     setFaviconStatus(null);
+    if (file.size > 2 * 1024 * 1024) {
+      setFaviconStatus({ type: "error", msg: "File too large — max 2 MB." });
+      e.target.value = "";
+      return;
+    }
     try {
       await uploadFavicon(file);
       const url = `/api/settings/favicon?t=${Date.now()}`;
       setFaviconUrl(url);
-      // Swap the browser tab icon live
       document.querySelectorAll("link[rel*='icon']").forEach(el => { el.href = url; });
       setFaviconStatus({ type: "success", msg: "Favicon updated." });
     } catch (err) {
-      setFaviconStatus({ type: "error", msg: "Upload failed: " + err.message });
+      const msg = err.message.includes("413") || err.message.includes("Request Entity")
+        ? "File too large — max 2 MB."
+        : "Upload failed. Check the file format and try again.";
+      setFaviconStatus({ type: "error", msg });
     }
     e.target.value = "";
   }
@@ -210,7 +217,7 @@ export default function SettingsPage() {
         <h2 className="settings-section-title">App Icon</h2>
         <p className="settings-description">
           Upload a custom favicon to replace the default clapperboard icon in browser tabs and on
-          home screen shortcuts. PNG, SVG, ICO, JPG accepted.
+          home screen shortcuts. Accepted formats: PNG, SVG, ICO, JPG · Max size: 2 MB.
         </p>
         <div className="settings-favicon-row">
           <img
