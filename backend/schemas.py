@@ -31,6 +31,8 @@ class MediaItemBase(BaseModel):
     cover_url: Optional[str] = None
     imdb_id: Optional[str] = None
     tmdb_id: Optional[str] = None
+    tmdb_collection_id: Optional[int] = None
+    tmdb_collection_name: Optional[str] = None
 
 
 class MediaItemCreate(MediaItemBase):
@@ -66,6 +68,8 @@ class MediaItemUpdate(BaseModel):
     cover_url: Optional[str] = None
     imdb_id: Optional[str] = None
     tmdb_id: Optional[str] = None
+    tmdb_collection_id: Optional[int] = None
+    tmdb_collection_name: Optional[str] = None
 
 
 class MediaItemOut(MediaItemBase):
@@ -299,3 +303,8 @@ class TMDBImportRequest(BaseModel):
 class UnownedItemsResponse(BaseModel):
     items: List[ListItemOut]
     total: int
+
+
+class CollectionFromTMDBRequest(BaseModel):
+    tmdb_collection_id: int
+    name: Optional[str] = None

@@ -298,3 +298,23 @@ export async function refreshPosters(listId) {
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
+
+export async function tmdbCollectionLookup(title, year, imdbId) {
+  const qs = new URLSearchParams();
+  if (title) qs.append("title", title);
+  if (year)  qs.append("year", year);
+  if (imdbId) qs.append("imdb_id", imdbId);
+  const res = await fetch(`${BASE}/media/tmdb-collection-lookup?${qs}`);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function createListFromCollection(body) {
+  const res = await fetch(`${BASE}/lists/from-collection`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}

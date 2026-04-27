@@ -73,6 +73,66 @@ def _safe_int(val):
         return None
 
 
+@router.get("/media/tmdb-collection-lookup")
+def tmdb_collection_lookup(
+    title: Optional[str] = None,
+    year: Optional[int] = None,
+    imdb_id: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    setting = db.query(SystemSetting).filter(SystemSetting.key == "tmdb_api_key").first()
+    api_key = (setting.value if setting and setting.value else "").strip()
+    if not api_key:
+        api_key = os.getenv("TMDB_API_KEY", "").strip()
+    if not api_key:
+        raise HTTPException(status_code=503, detail="TMDB API key not configured.")
+
+    tmdb_movie_id = None
+
+    # Prefer IMDB-based lookup for precision
+    if imdb_id:
+        url = f"https://api.themoviedb.org/3/find/{imdb_id}?api_key={api_key}&external_source=imdb_id"
+        try:
+            with urlopen(url, timeout=8) as resp:
+                data = json.loads(resp.read().decode())
+            results = data.get("movie_results", [])
+            if results:
+                tmdb_movie_id = str(results[0]["id"])
+        except URLError:
+            pass
+
+    if not tmdb_movie_id and title:
+        params = {"api_key": api_key, "query": title, "language": "en-US"}
+        if year:
+            params["year"] = year
+        url = "https://api.themoviedb.org/3/search/movie?" + urlencode(params)
+        try:
+            with urlopen(url, timeout=8) as resp:
+                data = json.loads(resp.read().decode())
+            results = data.get("results", [])
+            if results:
+                tmdb_movie_id = str(results[0]["id"])
+        except URLError:
+            pass
+
+    if not tmdb_movie_id:
+        return {"tmdb_id": None, "collection_id": None, "collection_name": None}
+
+    url = f"https://api.themoviedb.org/3/movie/{tmdb_movie_id}?api_key={api_key}&language=en-US"
+    try:
+        with urlopen(url, timeout=8) as resp:
+            details = json.loads(resp.read().decode())
+    except URLError as exc:
+        raise HTTPException(status_code=502, detail=f"TMDB request failed: {exc}")
+
+    collection = details.get("belongs_to_collection")
+    return {
+        "tmdb_id": tmdb_movie_id,
+        "collection_id": collection["id"] if collection else None,
+        "collection_name": collection["name"] if collection else None,
+    }
+
+
 @router.get("/media/lookup")
 def lookup_metadata(
     title: str = Query(...),

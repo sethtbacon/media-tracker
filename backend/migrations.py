@@ -56,3 +56,9 @@ def run_migrations():
             conn.execute(text("ALTER TABLE list_items ADD COLUMN watched_kids BOOLEAN NOT NULL DEFAULT 0"))
         if "not_interested" not in li_cols:
             conn.execute(text("ALTER TABLE list_items ADD COLUMN not_interested BOOLEAN NOT NULL DEFAULT 0"))
+
+        # TMDB collection membership
+        if "tmdb_collection_id" not in cols:
+            conn.execute(text("ALTER TABLE media_items ADD COLUMN tmdb_collection_id INTEGER"))
+        if "tmdb_collection_name" not in cols:
+            conn.execute(text("ALTER TABLE media_items ADD COLUMN tmdb_collection_name TEXT"))

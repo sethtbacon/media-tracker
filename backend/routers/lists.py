@@ -14,6 +14,7 @@ from database import get_db
 from models import ListItem, MediaItem, MediaList, SystemSetting
 from routers.import_export import parse_int, parse_str
 from schemas import (
+    CollectionFromTMDBRequest,
     ImportListResponse,
     ListCreate,
     ListDetailOut,
@@ -360,6 +361,58 @@ def get_all_unowned_items(db: Session = Depends(get_db)):
         for item in items:
             result.append(_build_item_out(item, None, list_name=ml.name))
     return {"items": result, "total": len(result)}
+
+
+# ── From TMDB collection ──────────────────────────────────────────────────────
+
+@router.post("/lists/from-collection", response_model=ListOut, status_code=201)
+def create_list_from_collection(body: CollectionFromTMDBRequest, db: Session = Depends(get_db)):
+    api_key = _get_tmdb_key(db)
+    if not api_key:
+        raise HTTPException(status_code=503, detail="TMDB API key not configured.")
+
+    url = (
+        f"https://api.themoviedb.org/3/collection/{body.tmdb_collection_id}"
+        f"?api_key={api_key}&language=en-US"
+    )
+    try:
+        with urlopen(url, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+    except URLError as exc:
+        raise HTTPException(status_code=502, detail=f"TMDB request failed: {exc}")
+
+    name = body.name or data.get("name") or f"Collection {body.tmdb_collection_id}"
+
+    ml = MediaList(
+        name=name,
+        list_type="external",
+        source_name="TMDB",
+        source_ref=f"tmdb-collection:{body.tmdb_collection_id}",
+    )
+    db.add(ml)
+    db.flush()
+
+    parts = sorted(data.get("parts", []), key=lambda p: p.get("release_date") or "")
+    new_items = []
+    for rank, part in enumerate(parts, 1):
+        title = part.get("title") or ""
+        raw_date = part.get("release_date") or ""
+        year = int(raw_date[:4]) if raw_date and len(raw_date) >= 4 else None
+        poster_path = part.get("poster_path")
+        poster_url = f"https://image.tmdb.org/t/p/w185{poster_path}" if poster_path else None
+        new_items.append(ListItem(
+            list_id=ml.id,
+            rank=rank,
+            title=title,
+            year=year,
+            tmdb_id=str(part["id"]),
+            poster_url=poster_url,
+        ))
+
+    _do_import_and_match(db, ml.id, new_items)
+    db.commit()
+    db.refresh(ml)
+    return _build_list_out(db, ml)
 
 
 # ── List CRUD ─────────────────────────────────────────────────────────────────

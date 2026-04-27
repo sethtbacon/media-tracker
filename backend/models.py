@@ -46,6 +46,8 @@ class MediaItem(Base):
     cover_url = Column(String, nullable=True)
     imdb_id = Column(String, nullable=True)
     tmdb_id = Column(String, nullable=True)
+    tmdb_collection_id = Column(Integer, nullable=True)
+    tmdb_collection_name = Column(String, nullable=True)
 
 
 class SystemSetting(Base):

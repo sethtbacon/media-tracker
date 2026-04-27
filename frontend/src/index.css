@@ -601,6 +601,27 @@ input:focus, select:focus, textarea:focus {
   font-size: 12px;
 }
 
+/* ── Collection banner ─────────────────────────────────── */
+.collection-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 6px;
+  padding: 7px 12px;
+  font-size: 12px;
+  color: var(--text);
+}
+.collection-banner.collection-banner-done {
+  background: color-mix(in srgb, var(--success) 12%, transparent);
+  border-color: color-mix(in srgb, var(--success) 35%, transparent);
+}
+.collection-banner-check {
+  color: var(--success);
+  font-weight: 600;
+}
+
 /* ── Cover preview ─────────────────────────────────────── */
 .cover-preview {
   display: flex;

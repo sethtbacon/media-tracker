@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { lookupMetadata, getMedia, getSettings } from "../api.js";
+import { lookupMetadata, getMedia, getSettings, tmdbCollectionLookup, createListFromCollection } from "../api.js";
 
 const EMPTY = {
   title: "",
@@ -11,6 +11,8 @@ const EMPTY = {
   mpaa_rating: "",
   imdb_id: "",
   tmdb_id: "",
+  tmdb_collection_id: null,
+  tmdb_collection_name: null,
   plot: "",
   cover_url: "",
   physical_bluray: false,
@@ -49,6 +51,8 @@ function toFormState(item) {
     mpaa_rating: item.mpaa_rating ?? "",
     imdb_id: item.imdb_id ?? "",
     tmdb_id: item.tmdb_id ?? "",
+    tmdb_collection_id: item.tmdb_collection_id ?? null,
+    tmdb_collection_name: item.tmdb_collection_name ?? null,
     plot: item.plot ?? "",
     cover_url: item.cover_url ?? "",
     watched_parent1: item.watched_parent1 ?? false,
@@ -64,6 +68,9 @@ export default function EditModal({ item, onSave, onClose }) {
   const [duplicates, setDuplicates] = useState([]);
   const [fetching, setFetching] = useState(false);
   const [fetchError, setFetchError] = useState(null);
+  const [collection, setCollection] = useState(null); // { id, name } when discovered
+  const [collectionCreating, setCollectionCreating] = useState(false);
+  const [collectionCreated, setCollectionCreated] = useState(false);
   const [ratingNames, setRatingNames] = useState({ p1: "Parent 1", p2: "Parent 2", kids: "Kids", kidsCount: 0 });
   const dupDebounce = useRef(null);
 
@@ -85,6 +92,8 @@ export default function EditModal({ item, onSave, onClose }) {
     setTitleError(false);
     setDuplicates([]);
     setFetchError(null);
+    setCollection(null);
+    setCollectionCreated(false);
   }, [item]);
 
   useEffect(() => {
@@ -132,6 +141,23 @@ export default function EditModal({ item, onSave, onClose }) {
         imdb_id:     meta.imdb_id     ?? f.imdb_id,
         year:        meta.year        != null && !f.year ? String(meta.year) : f.year,
       }));
+      // Background TMDB collection lookup — prefer IMDB ID for precision
+      const resolvedImdbId = meta.imdb_id || form.imdb_id;
+      const resolvedYear   = meta.year   || form.year   || undefined;
+      tmdbCollectionLookup(title, resolvedYear, resolvedImdbId || undefined)
+        .then((result) => {
+          setForm((f) => ({
+            ...f,
+            tmdb_id:              result.tmdb_id              ?? f.tmdb_id,
+            tmdb_collection_id:   result.collection_id   ?? null,
+            tmdb_collection_name: result.collection_name ?? null,
+          }));
+          if (result.collection_id) {
+            setCollection({ id: result.collection_id, name: result.collection_name });
+            setCollectionCreated(false);
+          }
+        })
+        .catch(() => {});
     } catch (err) {
       setFetchError(err.message);
     } finally {
@@ -156,10 +182,12 @@ export default function EditModal({ item, onSave, onClose }) {
       director:       form.director       || null,
       genre:          form.genre          || null,
       mpaa_rating:    form.mpaa_rating    || null,
-      imdb_id:        form.imdb_id        || null,
-      tmdb_id:        form.tmdb_id        || null,
-      plot:           form.plot           || null,
-      cover_url:      form.cover_url      || null,
+      imdb_id:              form.imdb_id              || null,
+      tmdb_id:              form.tmdb_id              || null,
+      tmdb_collection_id:   form.tmdb_collection_id   || null,
+      tmdb_collection_name: form.tmdb_collection_name || null,
+      plot:                 form.plot                 || null,
+      cover_url:            form.cover_url            || null,
     };
     onSave(payload);
   }
@@ -205,6 +233,32 @@ export default function EditModal({ item, onSave, onClose }) {
 
             {fetchError && (
               <div className="fetch-error">{fetchError}</div>
+            )}
+
+            {collection && (
+              <div className={`collection-banner${collectionCreated ? " collection-banner-done" : ""}`}>
+                <span>Part of <strong>{collection.name}</strong></span>
+                {!collectionCreated ? (
+                  <button
+                    className="btn btn-ghost"
+                    type="button"
+                    disabled={collectionCreating}
+                    onClick={async () => {
+                      setCollectionCreating(true);
+                      try {
+                        await createListFromCollection({ tmdb_collection_id: collection.id, name: collection.name });
+                        setCollectionCreated(true);
+                      } catch { /* ignore */ } finally {
+                        setCollectionCreating(false);
+                      }
+                    }}
+                  >
+                    {collectionCreating ? "Creating…" : "+ Create tracking list"}
+                  </button>
+                ) : (
+                  <span className="collection-banner-check">✓ List created</span>
+                )}
+              </div>
             )}
 
             {duplicates.length > 0 && (
