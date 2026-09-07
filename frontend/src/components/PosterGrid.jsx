@@ -55,7 +55,13 @@ export default function PosterGrid({ items, onDetail, onLoadMore, hasMore, loadi
                 </div>
               </div>
             </div>
-
+            <div className="poster-caption">
+              <span className="poster-caption-title">{item.title}</span>
+              <span className="poster-caption-meta">
+                {item.year || "Year unknown"}
+                {item.media_type ? ` · ${item.media_type === "TV Series" ? "TV" : item.media_type}` : ""}
+              </span>
+            </div>
           </div>
         );
       })}
