@@ -71,8 +71,9 @@ export default function SettingsPage({ onImportDone = () => {} }) {
       .catch(() => {});
 
     // Custom favicon: 200 direct. Default: 302 → /favicon.svg.
-    // r.redirected distinguishes them.
-    fetch("/api/settings/favicon", { method: "HEAD" })
+    // Use GET because the settings endpoint intentionally exposes no HEAD route;
+    // r.redirected still distinguishes the default from a custom favicon.
+    fetch("/api/settings/favicon")
       .then(r => { if (r.ok && !r.redirected) setFaviconUrl(`/api/settings/favicon?t=${Date.now()}`); })
       .catch(() => {});
   }, []);

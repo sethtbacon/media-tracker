@@ -176,29 +176,39 @@ export default function App() {
   return (
     <div className="app">
       <header className="header">
-        <span className="header-title">🎬 <span className="header-title-text">Media Tracker</span></span>
-        <nav className="header-nav">
+        <button className="header-brand" onClick={() => setView("library")} aria-label="Open library">
+          <span className="header-brand-mark" aria-hidden="true">MT</span>
+          <span className="header-brand-copy">
+            <strong>Media Tracker</strong>
+            <small>Your collection, in one place</small>
+          </span>
+        </button>
+        <nav className="header-nav" aria-label="Primary navigation">
           <button
-            className={`nav-btn${view === "library" ? " active" : ""}`}
+            className={`nav-btn ${view === "library" ? "active" : ""}`}
             onClick={() => setView("library")}
+            aria-current={view === "library" ? "page" : undefined}
           >
             Library
           </button>
           <button
-            className={`nav-btn${view === "movie-night" ? " active" : ""}`}
-            onClick={() => setView("movie-night")}
-          >
-            Movie Night
-          </button>
-          <button
-            className={`nav-btn${view === "lists" ? " active" : ""}`}
+            className={`nav-btn ${view === "lists" ? "active" : ""}`}
             onClick={() => setView("lists")}
+            aria-current={view === "lists" ? "page" : undefined}
           >
             Lists
           </button>
           <button
-            className={`nav-btn${view === "settings" ? " active" : ""}`}
+            className={`nav-btn ${view === "movie-night" ? "active" : ""}`}
+            onClick={() => setView("movie-night")}
+            aria-current={view === "movie-night" ? "page" : undefined}
+          >
+            Movie Night
+          </button>
+          <button
+            className={`nav-btn ${view === "settings" ? "active" : ""}`}
             onClick={() => setView("settings")}
+            aria-current={view === "settings" ? "page" : undefined}
           >
             Settings
           </button>
@@ -206,7 +216,7 @@ export default function App() {
         <div className="header-actions">
           {view === "library" && (
             <button className="btn btn-primary" onClick={openNew}>
-              + Add Item
+              Add item
             </button>
           )}
         </div>
