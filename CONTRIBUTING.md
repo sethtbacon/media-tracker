@@ -79,3 +79,31 @@ cd frontend
 npm install
 npm run dev   # proxies /api → localhost:8000
 ```
+
+---
+
+## Quality Gate
+
+Pull requests and updates to `main` run three isolated CI jobs:
+
+- Backend compile, fresh-database bootstrap, legacy migration, and HTTP CRUD smoke tests
+- Frontend clean install, high-severity dependency audit, and production build
+- Docker Compose image builds
+
+The backend checks only use temporary SQLite databases. They do not read or modify
+`data/media.db`.
+
+Run the equivalent checks locally from the repository root:
+
+```bash
+uv venv .venv
+uv pip install --python .venv/bin/python -r backend/requirements.txt
+.venv/bin/python -m compileall -q backend scripts
+.venv/bin/python scripts/ci_backend_smoke.py
+.venv/bin/python scripts/check_repo_hygiene.py
+npm ci --prefix frontend
+npm audit --prefix frontend --audit-level=high
+npm run build --prefix frontend
+docker compose config --quiet
+docker compose build
+```

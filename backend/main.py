@@ -6,8 +6,8 @@ import models
 import migrations
 from routers import media, import_export, settings, movie_night, lists
 
-migrations.run_migrations()
 models.Base.metadata.create_all(bind=engine)
+migrations.run_migrations()
 
 app = FastAPI(title="Media Tracker API")
 
